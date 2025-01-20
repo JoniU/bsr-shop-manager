@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "ESNext",
+    "jsx": "react",
+    "strict": true,
+    "moduleResolution": "node",
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "outDir": "./admin/build",
+    "types": ["react", "react-dom", "node"],
+    "typeRoots": ["./node_modules/@types", "./src/global"],
+    "baseUrl": "./", // Enables relative paths
+    "paths": {
+      "*": ["*"] // Resolves all local files
+    }
+  },
+  "include": ["admin/src/**/*",  "admin/src/global.d.ts"]
+}
