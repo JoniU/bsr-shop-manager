@@ -2,7 +2,7 @@
     <div class="w-full space-y-8">
         <!-- Costs Table -->
         <div>
-            <h3 class="text-xl font-semibold m-2 mt-4">Costs</h3>
+            <h3 class="text-xl font-semibold m-2 mt-4">General fixed Costs</h3>
             <div class="overflow-x-auto">
                 <table class="border-collapse w-full">
                     <thead class="bg-gray-100 dark:bg-gray-800">

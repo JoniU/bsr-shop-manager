@@ -94,15 +94,16 @@ export const useProductStore = defineStore('products', {
                 const config = useRuntimeConfig();
 
                 const apiEndpoint = parentId
-                    ? `/wp-json/wc/v3/products/${parentId}/variations/${productId}`
-                    : `/wp-json/wc/v3/products/${productId}`;
+                    ? `/wp-json/custom/v1/products/${parentId}/variations/${productId}`
+                    : `/wp-json/custom/v1/products/${productId}`;
 
                 const apiUrl = `${config.public.baseUrl}${apiEndpoint}`;
-
+                console.log(apiUrl)
                 const response = await axios.put(
                     apiUrl,
                     payload,
                     {
+                        withCredentials: true,
                     }
                 );
                 console.log(response);

@@ -82,19 +82,38 @@ function get_products_directly()
 }
 
 add_action('rest_api_init', function () {
-    register_rest_route('custom/v1', '/update-product/(?P<id>\d+)', [
-        'methods' => 'POST',
+    // Register endpoint for products
+    register_rest_route('custom/v1', '/products/(?P<id>\d+)', [
+        'methods' => 'PUT',
         'callback' => 'custom_update_product',
-        'permission_callback' => function () {
-            // Check if the current user has permission to edit products
-            return current_user_can('edit_products');
-        },
+        'permission_callback' => '__return_true',
+    ]);
+
+    // Register endpoint for variations
+    register_rest_route('custom/v1', '/products/(?P<parent_id>\d+)/variations/(?P<id>\d+)', [
+        'methods' => 'PUT',
+        'callback' => 'custom_update_variation',
+        'permission_callback' => '__return_true',
     ]);
 });
 
+// Callback for updating parent products
 function custom_update_product($request)
 {
+    return custom_handle_product_update($request, false);
+}
+
+// Callback for updating variations
+function custom_update_variation($request)
+{
+    return custom_handle_product_update($request, true);
+}
+
+// Shared logic for updating products and variations
+function custom_handle_product_update($request, $is_variation)
+{
     $product_id = $request->get_param('id');
+    $parent_id = $is_variation ? $request->get_param('parent_id') : null;
     $updates = $request->get_json_params();
 
     if (!$product_id || empty($updates)) {
@@ -108,8 +127,17 @@ function custom_update_product($request)
         return new WP_Error('product_not_found', 'Product not found.', ['status' => 404]);
     }
 
-    // Check if it's a variation
-    $is_variation = $product->is_type('variation');
+    // Ensure it's a variation if updating a variation
+    if ($is_variation && !$product->is_type('variation')) {
+        return new WP_Error('invalid_request', 'Specified ID is not a variation.', ['status' => 400]);
+    }
+
+    // Ensure it's not a variation if updating a parent product
+    if (!$is_variation && $product->is_type('variation')) {
+        return new WP_Error('invalid_request', 'Specified ID is a variation, not a parent product.', [
+            'status' => 400,
+        ]);
+    }
 
     // Apply updates
     foreach ($updates as $key => $value) {
@@ -123,7 +151,7 @@ function custom_update_product($request)
     // Prepare the response
     $response_data = $product->get_data();
     if ($is_variation) {
-        $response_data['parent_id'] = $product->get_parent_id(); // Add parent product ID for variations
+        $response_data['parent_id'] = $parent_id; // Add parent product ID for variations
     }
 
     return new WP_REST_Response(['success' => true, 'product' => $response_data], 200);

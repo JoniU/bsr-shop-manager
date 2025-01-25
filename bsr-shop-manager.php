@@ -5,7 +5,6 @@ Description: A WordPress plugin boilerplate with Nuxt for the admin interface.
 Version: 1.0
 Author: Joni Uunila
  */
-
 add_action('admin_menu', 'bsr_shop_manager_add_admin_page');
 function bsr_shop_manager_add_admin_page()
 {
@@ -105,7 +104,6 @@ add_filter(
     10,
     4,
 );
-
 /*
 if (!defined('ABSPATH')) {
     exit(); // Prevent direct access.
