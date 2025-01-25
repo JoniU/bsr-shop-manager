@@ -5,12 +5,44 @@ Description: A WordPress plugin boilerplate with Nuxt for the admin interface.
 Version: 1.0
 Author: Joni Uunila
  */
+add_filter(
+    'rest_pre_serve_request',
+    function ($served, $result, $request, $server) {
+        // Apply CORS settings only if WP_ENV is set to 'development'
+        if (defined('WP_ENV') && WP_ENV === 'development') {
+            // Allow localhost and the current WordPress site URL
+            $allowed_origins = [
+                'http://localhost:3000', // Local Nuxt dev server
+                get_site_url(), // Dynamically fetch the local WordPress URL
+            ];
+            // Get the Origin from the request headers
+            $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+
+            // Check if the origin is in the allowed list
+            if (in_array($origin, $allowed_origins, true)) {
+                // Set CORS headers
+                header("Access-Control-Allow-Origin: $origin");
+                header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+                header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type');
+                header('Access-Control-Allow-Credentials: true');
+            } else {
+            }
+        } else {
+            //error_log('WP_ENV is not development');
+        }
+
+        return $served;
+    },
+    10,
+    4,
+);
 
 add_action('plugins_loaded', function () {
-    if (!current_user_can('administrator')) {
-        wp_redirect(admin_url()); // Redirect to the main admin dashboard
-        exit();
-        return; // Prevent access if the user is not an admin
+    if (defined('WP_ENV') && WP_ENV === 'development') {
+    } else {
+        if (!current_user_can('administrator')) {
+            return; // Prevent access if the user is not an admin
+        }
     }
 
     add_action('admin_menu', 'bsr_shop_manager_add_admin_page');
@@ -62,7 +94,7 @@ add_action('plugins_loaded', function () {
 
     include_once plugin_dir_path(__FILE__) . 'api/product.php';
     include_once plugin_dir_path(__FILE__) . 'api/settings.php';
-    include_once plugin_dir_path(__FILE__) . 'api/nounce.php';
+    include_once plugin_dir_path(__FILE__) . 'api/order.php';
 
     require_once plugin_dir_path(__FILE__) . 'admin/meta-fields.php';
 
@@ -82,39 +114,8 @@ add_action('plugins_loaded', function () {
             );
         }
     }
-
-    add_filter(
-        'rest_pre_serve_request',
-        function ($served, $result, $request, $server) {
-            // Apply CORS settings only if WP_ENV is set to 'development'
-            if (defined('WP_ENV') && WP_ENV === 'development') {
-                // Allow localhost and the current WordPress site URL
-                $allowed_origins = [
-                    'http://localhost:3000', // Local Nuxt dev server
-                    get_site_url(), // Dynamically fetch the local WordPress URL
-                ];
-
-                // Get the Origin from the request headers
-                $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-
-                // Check if the origin is in the allowed list
-                if (in_array($origin, $allowed_origins, true)) {
-                    // Set CORS headers
-                    header("Access-Control-Allow-Origin: $origin");
-                    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-                    header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type');
-                    header('Access-Control-Allow-Credentials: true');
-                }
-            }
-
-            return $served;
-        },
-        10,
-        4,
-    );
-    // Your plugin's initialization code here
-    include_once plugin_dir_path(__FILE__) . 'api/product.php';
 });
+
 /*
 if (!defined('ABSPATH')) {
     exit(); // Prevent direct access.
