@@ -1,4 +1,7 @@
 <?php
+if (!defined('ABSPATH')) {
+    exit(); // Prevent direct access.
+}
 add_action('rest_api_init', function () {
     register_rest_route('custom/v1', '/bsr-shop-manager-settings', [
         'methods' => ['GET', 'POST'],
@@ -14,7 +17,6 @@ function handle_settings_request(WP_REST_Request $request)
     if ($request->get_method() === 'GET') {
         ob_clean(); // Clear the output buffer
         $settings = get_option($option_key, []);
-        error_log('Settings retrieved: ' . json_encode($settings));
         return rest_ensure_response($settings);
     }
 

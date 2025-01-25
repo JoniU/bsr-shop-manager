@@ -1,4 +1,8 @@
 <?php
+if (!defined('ABSPATH')) {
+    exit(); // Prevent direct access.
+}
+
 add_action('rest_api_init', function () {
     register_rest_route('custom/v1', '/get-products', [
         'methods' => 'GET',
