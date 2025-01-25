@@ -5,32 +5,40 @@ Description: A WordPress plugin boilerplate with Nuxt for the admin interface.
 Version: 1.0
 Author: Joni Uunila
  */
-add_action('admin_menu', 'bsr_shop_manager_add_admin_page');
-function bsr_shop_manager_add_admin_page()
-{
-    // Add the custom admin page
-    add_menu_page(
-        __('BSR Shop Manager', 'bsr-shop-manager'), // Page title
-        __('Shop Manager', 'bsr-shop-manager'), // Menu title
-        'manage_options', // Capability
-        'bsr-shop-manager', // Menu slug
-        'bsr_shop_manager_render_page', // Callback function
-        'dashicons-store', // Icon
-        25, // Position
-    );
-}
 
-function bsr_shop_manager_render_page()
-{
-    // Path to the index.html file
-    $index_file = plugin_dir_path(__FILE__) . 'dist/public/index.html';
+add_action('plugins_loaded', function () {
+    if (!current_user_can('administrator')) {
+        wp_redirect(admin_url()); // Redirect to the main admin dashboard
+        exit();
+        return; // Prevent access if the user is not an admin
+    }
 
-    // Check if the file exists
-    if (file_exists($index_file)) {
-        // Get the content of the file
-        $content = file_get_contents($index_file);
-        // Add custom CSS using a script
-        $custom_css = "
+    add_action('admin_menu', 'bsr_shop_manager_add_admin_page');
+    function bsr_shop_manager_add_admin_page()
+    {
+        // Add the custom admin page
+        add_menu_page(
+            __('BSR Shop Manager', 'bsr-shop-manager'), // Page title
+            __('Shop Manager', 'bsr-shop-manager'), // Menu title
+            'manage_options', // Capability
+            'bsr-shop-manager', // Menu slug
+            'bsr_shop_manager_render_page', // Callback function
+            'dashicons-store', // Icon
+            25, // Position
+        );
+    }
+
+    function bsr_shop_manager_render_page()
+    {
+        // Path to the index.html file
+        $index_file = plugin_dir_path(__FILE__) . 'dist/public/index.html';
+
+        // Check if the file exists
+        if (file_exists($index_file)) {
+            // Get the content of the file
+            $content = file_get_contents($index_file);
+            // Add custom CSS using a script
+            $custom_css = "
             <script>
                 document.addEventListener('DOMContentLoaded', function() {
                     var style = document.createElement('style');
@@ -42,68 +50,71 @@ function bsr_shop_manager_render_page()
             </script>
         ";
 
-        // Append the script with styles to the content
-        echo $content . $custom_css;
-    } else {
-        // Display an error message if the file is missing
-        echo '<div class="error"><p>' .
-            __('The index.html file could not be found.', 'bsr-shop-manager') .
-            '</p></div>';
-    }
-}
-
-include_once plugin_dir_path(__FILE__) . 'api/product.php';
-include_once plugin_dir_path(__FILE__) . 'api/settings.php';
-include_once plugin_dir_path(__FILE__) . 'api/nounce.php';
-
-require_once plugin_dir_path(__FILE__) . 'admin/meta-fields.php';
-
-add_action('admin_enqueue_scripts', 'bsr_shop_manager_add_admin_styles', 100);
-function bsr_shop_manager_add_admin_styles($hook)
-{
-    // Only add styles to your custom admin page
-    if ($hook === 'toplevel_page_bsr-shop-manager') {
-        wp_deregister_style('ie');
-        wp_deregister_style('wp-admin');
-        // Enqueue a custom CSS file
-        wp_enqueue_style(
-            'bsr-admin-styles', // Handle
-            plugins_url('assets/admin.css', __FILE__), // Path to CSS file
-            [], // Dependencies
-            '1.0.0', // Version
-        );
-    }
-}
-
-add_filter(
-    'rest_pre_serve_request',
-    function ($served, $result, $request, $server) {
-        // Apply CORS settings only if WP_ENV is set to 'development'
-        if (defined('WP_ENV') && WP_ENV === 'development') {
-            // Allow localhost and the current WordPress site URL
-            $allowed_origins = [
-                'http://localhost:3000', // Local Nuxt dev server
-                get_site_url(), // Dynamically fetch the local WordPress URL
-            ];
-
-            // Get the Origin from the request headers
-            $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
-
-            // Check if the origin is in the allowed list
-            if (in_array($origin, $allowed_origins, true)) {
-                // Set CORS headers
-                header("Access-Control-Allow-Origin: $origin");
-                header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-                header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type');
-                header('Access-Control-Allow-Credentials: true');
-            }
+            // Append the script with styles to the content
+            echo $content . $custom_css;
+        } else {
+            // Display an error message if the file is missing
+            echo '<div class="error"><p>' .
+                __('The index.html file could not be found.', 'bsr-shop-manager') .
+                '</p></div>';
         }
+    }
 
-        return $served;
-    },
-    10,
-    4,
-);
+    include_once plugin_dir_path(__FILE__) . 'api/product.php';
+    include_once plugin_dir_path(__FILE__) . 'api/settings.php';
+    include_once plugin_dir_path(__FILE__) . 'api/nounce.php';
+
+    require_once plugin_dir_path(__FILE__) . 'admin/meta-fields.php';
+
+    add_action('admin_enqueue_scripts', 'bsr_shop_manager_add_admin_styles', 100);
+    function bsr_shop_manager_add_admin_styles($hook)
+    {
+        // Only add styles to your custom admin page
+        if ($hook === 'toplevel_page_bsr-shop-manager') {
+            wp_deregister_style('ie');
+            wp_deregister_style('wp-admin');
+            // Enqueue a custom CSS file
+            wp_enqueue_style(
+                'bsr-admin-styles', // Handle
+                plugins_url('assets/admin.css', __FILE__), // Path to CSS file
+                [], // Dependencies
+                '1.0.0', // Version
+            );
+        }
+    }
+
+    add_filter(
+        'rest_pre_serve_request',
+        function ($served, $result, $request, $server) {
+            // Apply CORS settings only if WP_ENV is set to 'development'
+            if (defined('WP_ENV') && WP_ENV === 'development') {
+                // Allow localhost and the current WordPress site URL
+                $allowed_origins = [
+                    'http://localhost:3000', // Local Nuxt dev server
+                    get_site_url(), // Dynamically fetch the local WordPress URL
+                ];
+
+                // Get the Origin from the request headers
+                $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+
+                // Check if the origin is in the allowed list
+                if (in_array($origin, $allowed_origins, true)) {
+                    // Set CORS headers
+                    header("Access-Control-Allow-Origin: $origin");
+                    header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+                    header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type');
+                    header('Access-Control-Allow-Credentials: true');
+                }
+            }
+
+            return $served;
+        },
+        10,
+        4,
+    );
+    // Your plugin's initialization code here
+    include_once plugin_dir_path(__FILE__) . 'api/product.php';
+});
 /*
 if (!defined('ABSPATH')) {
     exit(); // Prevent direct access.

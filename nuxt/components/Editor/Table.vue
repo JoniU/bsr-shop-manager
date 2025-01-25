@@ -31,7 +31,7 @@ const value = ref(null)
 
         <!-- Table Body -->
         <div v-else>
-            <div>
+            <div> <!-- row -->
                 <div v-for="product in products" :key="product.id"
                     class="grid p-2 border-b border-gray-400 dark:border-gray-700 items-center" :class="product.parentId
                         ? 'bg-gray-300 dark:bg-gray-900 text-gray-900 dark:text-gray-200'
