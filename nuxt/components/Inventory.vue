@@ -28,12 +28,13 @@ const inventoryProducts = computed(() => {
             return typeLabel !== 'Parent' && typeLabel !== 'Bundle';
         })
         .map((product) => {
-            const regularPrice = parseFloat(product.regular_price) || 0;
-            const cogs = product.meta_data?._cogs_price
-                ? parseFloat(product.meta_data._cogs_price) || 0
+            const regularPrice = parseFloat(String(product.regular_price)) || 0;
+
+            const cogs = product.meta_data && product.meta_data._cogs_price
+                ? parseFloat(String(product.meta_data._cogs_price)) || 0
                 : parseFloat((regularPrice * 0.6).toFixed(2));
 
-            const stockQuantity = parseFloat(product.stock_quantity) || 0;
+            const stockQuantity = parseFloat(String(product.stock_quantity)) || 0;
             const totalStockValue = parseFloat((stockQuantity * cogs).toFixed(2));
 
             return {
@@ -93,17 +94,17 @@ const downloadCSV = () => {
     link.download = 'inventory_data.csv';
     link.click();
 };
-const rowClass = "border border-gray-200 dark:border-gray-700 px-2 py-1 text-left text-sm text-gray-700 dark:text-gray-300";
-const thClass = "pl-2";
-const tdClass = "border-b border-gray-200 dark:border-gray-900 px-2 py-1";
+const rowClass = "px-2 py-1 text-left text-sm text-gray-700 dark:text-gray-300";
+const thClass = "pl-2 p-1";
+const tdClass = "px-2 py-2";
 
 </script>
 
 
 <template>
-    <div class="w-full">
+    <div class="w-full p-4">
         <!-- Total Stock Value Summary -->
-        <div class="m-4 flex justify-between items-center">
+        <div class="flex justify-between items-center">
             <div>
                 <div class="text-lg font-bold">
                     Total Stock Value: <span class="text-primary">€{{ totalStockValueSum }}</span>
@@ -117,12 +118,12 @@ const tdClass = "border-b border-gray-200 dark:border-gray-900 px-2 py-1";
             </Ubutton>
         </div>
         <!-- Inventory Table -->
-        <div v-if="isLoading" class="p-4">
+        <div v-if="isLoading" class="my-4">
             <UProgress v-model="value" />
         </div>
-        <table v-else class="w-full table-auto border-collapse border-b border-gray-200 dark:border-gray-700">
+        <table v-else class="w-full my-4 table-auto border-collapse border-b border-gray-200 dark:border-gray-700">
             <thead class="bg-gray-50 dark:bg-gray-800 border-b border-gray-200  dark:border-gray-900 ">
-                <tr :class="rowClass">
+                <tr :class="rowClass" class="border-0">
                     <th :class="thClass" class="pl-4">ID</th>
                     <th :class="thClass">Name</th>
                     <th :class="thClass">SKU</th>
@@ -133,7 +134,7 @@ const tdClass = "border-b border-gray-200 dark:border-gray-900 px-2 py-1";
             </thead>
             <tbody>
                 <tr v-for="product in inventoryProducts" :key="product.id"
-                    class="odd:bg-gray-100 even:bg-gray-50 dark:odd:bg-gray-800 dark:even:bg-gray-900 text-sm text-gray-800 dark:text-gray-300">
+                    class="odd:bg-gray-50 even:bg-gray-100 dark:odd:bg-gray-900 dark:even:bg-gray-800 text-sm text-gray-800 dark:text-gray-300">
                     <td :class="tdClass" class="pl-4">{{ product.id }}</td>
                     <td :class="tdClass" v-html="product.name"></td>
                     <td :class="tdClass">{{ product.sku }}</td>
