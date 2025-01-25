@@ -23,35 +23,52 @@ add_action('rest_api_init', function () {
 });
 
 /**
- * Callback function for the API endpoint to get orders data.
+ * Callback function for the API endpoint to get orders data with pagination.
  */
-function shop_manager_get_orders_data()
+function shop_manager_get_orders_data(WP_REST_Request $request)
 {
+    $page = absint($request->get_param('page')) ?: 1; // Default to page 1
+    $per_page = absint($request->get_param('per_page')) ?: 100; // Default to 100 orders per page
+
+    // Regenerate cache if requested
+    $regenerate = $request->get_param('regenerate') === 'true';
+    if ($regenerate) {
+        $success = shop_manager_store_all_orders_to_json();
+        if (!$success) {
+            return new WP_Error('regeneration_failed', 'Failed to regenerate the cache file.', ['status' => 500]);
+        }
+    }
+
+    // Define the JSON file path
     $upload_dir = wp_upload_dir();
     $cache_file = trailingslashit($upload_dir['basedir']) . 'bsr-shop-manager/all_orders.json';
-    $cache_lifetime = 24 * 60 * 60; // 24 hours
 
-    // Check if the cached file exists and is still valid
-    if (file_exists($cache_file) && time() - filemtime($cache_file) < $cache_lifetime) {
-        // Read the contents of the cached file
-        $data = file_get_contents($cache_file);
-        if ($data === false) {
-            return new WP_Error('file_read_error', 'Failed to read cached file.', ['status' => 500]);
-        }
-        return rest_ensure_response(json_decode($data, true));
+    // Read cached file
+    if (!file_exists($cache_file)) {
+        return new WP_Error('no_cache_file', 'The cache file does not exist.', ['status' => 500]);
     }
 
-    // If the cache is missing or expired, regenerate it
-    $success = shop_manager_store_all_orders_to_json();
-    if ($success) {
-        $data = file_get_contents($cache_file);
-        if ($data === false) {
-            return new WP_Error('file_read_error', 'Failed to read newly generated file.', ['status' => 500]);
-        }
-        return rest_ensure_response(json_decode($data, true));
+    $data = file_get_contents($cache_file);
+    if ($data === false) {
+        return new WP_Error('file_read_error', 'Failed to read the cache file.', ['status' => 500]);
     }
 
-    return new WP_Error('no_orders_data', 'Could not retrieve or generate order data.', ['status' => 500]);
+    $orders = json_decode($data, true)['orders'] ?? [];
+    $total_orders = count($orders);
+    $total_pages = ceil($total_orders / $per_page);
+
+    // Paginate the orders
+    $paginated_orders = array_slice($orders, ($page - 1) * $per_page, $per_page);
+
+    return rest_ensure_response([
+        'orders' => $paginated_orders,
+        'meta' => [
+            'total_orders' => $total_orders,
+            'total_pages' => $total_pages,
+            'current_page' => $page,
+            'per_page' => $per_page,
+        ],
+    ]);
 }
 
 /**
@@ -59,6 +76,7 @@ function shop_manager_get_orders_data()
  */
 function shop_manager_store_all_orders_to_json()
 {
+    set_time_limit(0); // Unlimited execution time
     // Define the JSON file path
     $upload_dir = wp_upload_dir();
     $cache_file = trailingslashit($upload_dir['basedir']) . 'bsr-shop-manager/all_orders.json';
@@ -66,7 +84,7 @@ function shop_manager_store_all_orders_to_json()
     // Ensure the directory exists
     wp_mkdir_p(dirname($cache_file));
 
-    $per_page = 100; // Number of orders to fetch per batch
+    $per_page = 500; // Number of orders to fetch per batch
     $current_page = 1;
     $first_item = true; // Tracks if the first item is being written to JSON
 
@@ -109,23 +127,23 @@ function shop_manager_store_all_orders_to_json()
             // Calculate totals in base currency
             $order_total = isset($order_meta_data['_order_total_base_currency'])
                 ? floatval($order_meta_data['_order_total_base_currency'])
-                : floatval($order->get_total() * $exchange_rate);
+                : floatval($order->get_total()) * $exchange_rate;
 
             $order_shipping_total = isset($order_meta_data['_order_shipping_base_currency'])
                 ? floatval($order_meta_data['_order_shipping_base_currency'])
-                : floatval($order->get_shipping_total() * $exchange_rate);
+                : floatval($order->get_shipping_total()) * $exchange_rate;
 
             $order_tax_total = isset($order_meta_data['_order_tax_base_currency'])
                 ? floatval($order_meta_data['_order_tax_base_currency'])
-                : floatval($order->get_total_tax() * $exchange_rate);
+                : floatval($order->get_total_tax()) * $exchange_rate;
 
             $order_shipping_tax = isset($order_meta_data['_order_shipping_tax_base_currency'])
                 ? floatval($order_meta_data['_order_shipping_tax_base_currency'])
-                : floatval($order->get_shipping_tax() * $exchange_rate);
+                : floatval($order->get_shipping_tax()) * $exchange_rate;
 
             $order_discount = isset($order_meta_data['_cart_discount_base_currency'])
                 ? floatval($order_meta_data['_cart_discount_base_currency'])
-                : floatval($order->get_discount_total() * $exchange_rate);
+                : floatval($order->get_discount_total()) * $exchange_rate;
 
             // Calculate revenue
             $order_revenue = $order_total - $order_tax_total - $order_discount;
@@ -154,6 +172,7 @@ function shop_manager_store_all_orders_to_json()
 
                 $order_data['line_items'][] = [
                     'product_id' => $item->get_product_id(),
+                    'variation_id' => $item->get_variation_id(),
                     'name' => strip_tags($item->get_name()),
                     'quantity' => $item->get_quantity(),
                     'subtotal' => isset($line_item_meta_data['_line_subtotal_base_currency'])
@@ -172,7 +191,6 @@ function shop_manager_store_all_orders_to_json()
                 ];
             }
 
-            // Write the order data to the file
             if (!$first_item) {
                 fwrite($file_handle, ',');
             } else {
@@ -180,9 +198,15 @@ function shop_manager_store_all_orders_to_json()
             }
 
             fwrite($file_handle, json_encode($order_data));
+            fflush($file_handle); // Flush the output buffer
+            unset($order_meta_data, $line_item_meta_data, $order, $order_data);
         }
 
+        error_log($current_page);
         $current_page++; // Move to the next page
+        unset($order_data, $order);
+        gc_collect_cycles(); // Free memory
+        error_log('Memory usage: ' . memory_get_usage(true) . ' bytes');
     } while (count($orders) === $per_page); // Continue until no more orders are fetched
 
     // Write the JSON array closing
@@ -251,4 +275,27 @@ function shop_manager_get_order_by_id(WP_REST_Request $request)
 
     // Return the raw order data
     return rest_ensure_response($order_data);
+}
+
+if (defined('WP_CLI') && WP_CLI) {
+    /**
+     * Registers a custom WP-CLI command to regenerate the orders JSON file.
+     */
+    WP_CLI::add_command('shop-manager:regenerate-orders', 'shop_manager_regenerate_orders_json');
+}
+
+/**
+ * Callback function to regenerate the orders JSON file via WP-CLI.
+ */
+function shop_manager_regenerate_orders_json($args, $assoc_args)
+{
+    WP_CLI::log('Starting order JSON file regeneration...');
+
+    $success = shop_manager_store_all_orders_to_json();
+
+    if ($success) {
+        WP_CLI::success('Order JSON file regenerated successfully!');
+    } else {
+        WP_CLI::error('Failed to regenerate the order JSON file.');
+    }
 }

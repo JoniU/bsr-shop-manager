@@ -27,11 +27,11 @@ import { useAppStore } from '~/stores/app'; // Import the Pinia store
 const appStore = useAppStore(); // Access the store
 
 const pages = ref([
-    /*{
+    {
         label: 'Analytics',
         value: 'Analytics',
         icon: 'i-lucide-bar-chart', // Suitable icon for analytics
-    }, */
+    },
     {
         label: 'Editor',
         value: 'Editor',
@@ -50,6 +50,11 @@ const pages = ref([
     {
         label: 'Order Data',
         value: 'OrderData',
+        icon: 'i-lucide-settings', // Icon for settings
+    },
+    {
+        label: 'Analytics Data',
+        value: 'AnalyticsData',
         icon: 'i-lucide-settings', // Icon for settings
     },
 ]);

@@ -95,6 +95,7 @@ add_action('plugins_loaded', function () {
     include_once plugin_dir_path(__FILE__) . 'api/product.php';
     include_once plugin_dir_path(__FILE__) . 'api/settings.php';
     include_once plugin_dir_path(__FILE__) . 'api/order.php';
+    include_once plugin_dir_path(__FILE__) . 'api/profit-time.php';
 
     require_once plugin_dir_path(__FILE__) . 'admin/meta-fields.php';
 
