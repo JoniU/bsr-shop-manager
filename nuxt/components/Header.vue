@@ -47,6 +47,11 @@ const pages = ref([
         value: 'Settings',
         icon: 'i-lucide-settings', // Icon for settings
     },
+    {
+        label: 'Order Data',
+        value: 'OrderData',
+        icon: 'i-lucide-settings', // Icon for settings
+    },
 ]);
 
 const selectedPage = ref(appStore.currentPage);

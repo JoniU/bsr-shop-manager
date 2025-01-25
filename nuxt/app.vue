@@ -19,6 +19,8 @@ import Analytics from '~/components/Analytics.vue';
 import Editor from '~/components/Editor.vue';
 import Inventory from '~/components/Inventory.vue';
 import Settings from '~/components/Settings.vue';
+import OrderData from '~/components/OrderData.vue';
+
 
 const appStore = useAppStore();
 
@@ -32,6 +34,7 @@ const components = {
     Editor,
     Inventory,
     Settings,
+    OrderData,
 };
 
 </script>
