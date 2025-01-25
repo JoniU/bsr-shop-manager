@@ -18,3 +18,4 @@ node_modules/
 deploy-exclusions.txt
 nitro.json
 nuxt/
+nuxt/.env

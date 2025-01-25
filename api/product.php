@@ -3,6 +3,7 @@ add_action('rest_api_init', function () {
     register_rest_route('custom/v1', '/get-products', [
         'methods' => 'GET',
         'callback' => 'get_products_directly',
+        'permission_callback' => '__return_true',
     ]);
 });
 

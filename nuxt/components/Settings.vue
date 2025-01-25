@@ -125,10 +125,8 @@ function generateEmptyData() {
 const updateValue = (table: Record<number, number[]>, year: number, monthIndex: number, value: number) => {
     table[year][monthIndex] = value;
 };
-
 const config = useRuntimeConfig();
-const apiBase = config.public.wooApiBase;
-const apiUrl = apiBase + '/wp-json/custom/v1/bsr-shop-manager-settings';
+const apiUrl = `${config.public.baseUrl}/wp-json/custom/v1/bsr-shop-manager-settings`;
 const loading = ref(false);
 const error = ref<string | null>(null);
 

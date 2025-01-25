@@ -53,8 +53,10 @@ function bsr_shop_manager_render_page()
     }
 }
 
-include_once plugin_dir_path(__FILE__) . 'product-cache.php';
-include_once plugin_dir_path(__FILE__) . 'settings.php';
+include_once plugin_dir_path(__FILE__) . 'api/product.php';
+include_once plugin_dir_path(__FILE__) . 'api/settings.php';
+include_once plugin_dir_path(__FILE__) . 'api/nounce.php';
+
 require_once plugin_dir_path(__FILE__) . 'admin/meta-fields.php';
 
 add_action('admin_enqueue_scripts', 'bsr_shop_manager_add_admin_styles', 100);
@@ -73,6 +75,36 @@ function bsr_shop_manager_add_admin_styles($hook)
         );
     }
 }
+
+add_filter(
+    'rest_pre_serve_request',
+    function ($served, $result, $request, $server) {
+        // Apply CORS settings only if WP_ENV is set to 'development'
+        if (defined('WP_ENV') && WP_ENV === 'development') {
+            // Allow localhost and the current WordPress site URL
+            $allowed_origins = [
+                'http://localhost:3000', // Local Nuxt dev server
+                get_site_url(), // Dynamically fetch the local WordPress URL
+            ];
+
+            // Get the Origin from the request headers
+            $origin = isset($_SERVER['HTTP_ORIGIN']) ? $_SERVER['HTTP_ORIGIN'] : '';
+
+            // Check if the origin is in the allowed list
+            if (in_array($origin, $allowed_origins, true)) {
+                // Set CORS headers
+                header("Access-Control-Allow-Origin: $origin");
+                header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+                header('Access-Control-Allow-Headers: Authorization, X-WP-Nonce, Content-Type');
+                header('Access-Control-Allow-Credentials: true');
+            }
+        }
+
+        return $served;
+    },
+    10,
+    4,
+);
 
 /*
 if (!defined('ABSPATH')) {

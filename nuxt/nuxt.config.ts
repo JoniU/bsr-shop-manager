@@ -12,8 +12,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      wpApiBaseUrl: 'https://blacksmokeracing.com.ddev.site/wp-json/custom/v1',
-      wooApiBase: process.env.WOO_API_BASE || 'https://blacksmokeracing.com.ddev.site/wp-json/wc/v3',
+      baseUrl: process.env.LOCAL_DEV_URL || '',
       wooConsumerKey: process.env.WOO_CONSUMER_KEY || '',
       wooConsumerSecret: process.env.WOO_CONSUMER_SECRET || '',
     },

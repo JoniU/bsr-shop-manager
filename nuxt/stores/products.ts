@@ -1,7 +1,6 @@
 import { defineStore } from 'pinia';
 import type { Product } from '~/types/product'; // Assuming `Product` is defined elsewhere
 import axios from 'axios';
-import { getWooCommerceAuthHeader } from '~/composables/useWooAuth'; // Import the helper
 import { useProductTransform } from '~/composables/useProductTransform';
 
 export const useProductStore = defineStore('products', {
@@ -19,8 +18,7 @@ export const useProductStore = defineStore('products', {
             this.error = null;
 
             const config = useRuntimeConfig();
-            const apiBase = config.public.wooApiBase;
-            const apiUrl = apiBase + '/wp-json/custom/v1/get-products';
+            const apiUrl = `${config.public.baseUrl}/wp-json/custom/v1/get-products`;
 
             try {
                 const response = await axios.get(apiUrl);
@@ -88,25 +86,23 @@ export const useProductStore = defineStore('products', {
 
         // Update a single product by ID
         async updateProduct(productId: number, updates: Partial<Product>, parentId?: number) {
-            const config = useRuntimeConfig();
-            const apiBase = config.public.wooApiBase;
-
             try {
                 const { transformProductToSave } = useProductTransform();
                 const payload = transformProductToSave(updates); // Transform the partial Product
 
                 // Construct the URL dynamically
+                const config = useRuntimeConfig();
+
                 const apiEndpoint = parentId
-                    ? `${apiBase}/wp-json/wc/v3/products/${parentId}/variations/${productId}`
-                    : `${apiBase}/wp-json/wc/v3/products/${productId}`;
+                    ? `/wp-json/wc/v3/products/${parentId}/variations/${productId}`
+                    : `/wp-json/wc/v3/products/${productId}`;
+
+                const apiUrl = `${config.public.baseUrl}${apiEndpoint}`;
 
                 const response = await axios.put(
-                    apiEndpoint,
+                    apiUrl,
                     payload,
                     {
-                        headers: {
-                            Authorization: getWooCommerceAuthHeader(),
-                        },
                     }
                 );
                 console.log(response);

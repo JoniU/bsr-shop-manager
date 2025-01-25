@@ -104,8 +104,13 @@ const tdClass = "border-b border-gray-200 dark:border-gray-900 px-2 py-1";
     <div class="w-full">
         <!-- Total Stock Value Summary -->
         <div class="m-4 flex justify-between items-center">
-            <div class="text-lg font-bold">
-                Total Stock Value: <span class="text-primary">€{{ totalStockValueSum }}</span>
+            <div>
+                <div class="text-lg font-bold">
+                    Total Stock Value: <span class="text-primary">€{{ totalStockValueSum }}</span>
+                </div>
+                <div class="text-sm text-gray-500">
+                    This is counted with COGS at 60% of the price if no COGS are set.
+                </div>
             </div>
             <UButton @click="downloadCSV" color="primary" variant="outline" size="lg">
                 Download CSV
