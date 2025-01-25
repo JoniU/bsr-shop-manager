@@ -12,9 +12,7 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
-      baseUrl: process.env.LOCAL_DEV_URL || '',
-      wooConsumerKey: process.env.WOO_CONSUMER_KEY || '',
-      wooConsumerSecret: process.env.WOO_CONSUMER_SECRET || '',
+      baseUrl: process.env.NODE_ENV === 'development' ? process.env.LOCAL_DEV_URL || '' : '',
     },
   },
 

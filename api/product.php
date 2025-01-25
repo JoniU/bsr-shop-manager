@@ -80,3 +80,51 @@ function get_products_directly()
 
     return $products;
 }
+
+add_action('rest_api_init', function () {
+    register_rest_route('custom/v1', '/update-product/(?P<id>\d+)', [
+        'methods' => 'POST',
+        'callback' => 'custom_update_product',
+        'permission_callback' => function () {
+            // Check if the current user has permission to edit products
+            return current_user_can('edit_products');
+        },
+    ]);
+});
+
+function custom_update_product($request)
+{
+    $product_id = $request->get_param('id');
+    $updates = $request->get_json_params();
+
+    if (!$product_id || empty($updates)) {
+        return new WP_Error('invalid_request', 'Product ID and updates are required.', ['status' => 400]);
+    }
+
+    // Fetch the product or variation
+    $product = wc_get_product($product_id);
+
+    if (!$product) {
+        return new WP_Error('product_not_found', 'Product not found.', ['status' => 404]);
+    }
+
+    // Check if it's a variation
+    $is_variation = $product->is_type('variation');
+
+    // Apply updates
+    foreach ($updates as $key => $value) {
+        if (is_callable([$product, "set_$key"])) {
+            $product->{"set_$key"}($value);
+        }
+    }
+
+    $product->save();
+
+    // Prepare the response
+    $response_data = $product->get_data();
+    if ($is_variation) {
+        $response_data['parent_id'] = $product->get_parent_id(); // Add parent product ID for variations
+    }
+
+    return new WP_REST_Response(['success' => true, 'product' => $response_data], 200);
+}
