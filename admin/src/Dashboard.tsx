@@ -9,7 +9,6 @@ import { aggregateDataByMonth, AggregatedChartData } from './aggregationUtils';
 import ProfitTimelineChart from './DashboardProfitTimelineChart';
 import ProfitDoughnutChart from './DashboardProfitDoughnutChart';
 import ProductRevenueTable from './DashboardProductTable';
-import RawProductDataTable from "./RawProductDataTable";
 
 axios.defaults.headers.post['Content-Type'] = 'application/x-www-form-urlencoded';
 axios.defaults.transformRequest = [(data) => qs.stringify(data)];
@@ -142,12 +141,6 @@ const Dashboard: React.FC = () => {
                     <h2 className="hndle"><span>Product Table</span></h2>
                     <div className="inside">
                         <ProductRevenueTable ordersData={ordersData} />
-                    </div>
-                </div>
-                <div className="postbox raw-product-table">
-                    <h2 className="hndle"><span>Product Table</span></h2>
-                    <div className="inside">
-                        <RawProductDataTable rawData={ordersData} />
                     </div>
                 </div>
             </div>

@@ -1,36 +1,37 @@
 <?php
 // Ensuring ABSPATH for security
 if (!defined('ABSPATH')) {
-    exit;
+    exit();
 }
 
-function shop_manager_fetch_products_callback() {
+function shop_manager_fetch_products_callback()
+{
     if (!isset($_POST['security']) || !check_ajax_referer('shop_manager_nonce', 'security', false)) {
-        error_log("Nonce check failed or security key is missing.");
+        error_log('Nonce check failed or security key is missing.');
         wp_send_json_error(['message' => 'Invalid security token.'], 400);
         return;
     }
 
-    error_log("Nonce verified: " . $_POST['security']);
-    error_log("Received AJAX request for fetching products.");
+    error_log('Nonce verified: ' . $_POST['security']);
+    error_log('Received AJAX request for fetching products.');
 
-    $products_data = array();
+    $products_data = [];
 
-    $args = array(
-        'post_type' => array('product', 'product_variation'),
+    $args = [
+        'post_type' => ['product', 'product_variation'],
         'posts_per_page' => -1,
-        'tax_query' => array(
-            array(
+        'tax_query' => [
+            [
                 'taxonomy' => 'product_type',
-                'field'    => 'slug',
-                'terms'    => 'Woosb',
+                'field' => 'slug',
+                'terms' => 'Woosb',
                 'operator' => 'NOT IN',
-            ),
-        ),
+            ],
+        ],
         'orderby' => 'ID',
         'order' => 'ASC',
-    );
-    
+    ];
+
     $products_query = new WP_Query($args);
 
     if ($products_query->have_posts()) {
@@ -63,9 +64,9 @@ function shop_manager_fetch_products_callback() {
             $price_excl_tax = wc_get_price_excluding_tax($product);
             $formatted_price = number_format((float) $price_excl_tax, 2, '.', '') . ' €';
 
-            $products_data[] = array(
+            $products_data[] = [
                 'id' => $product_id,
-                'name' => get_the_title(),
+                'name' => html_entity_decode(strip_tags(get_the_title())),
                 'type' => $product_type,
                 'sku' => $product->get_sku(),
                 'price' => $formatted_price,
@@ -77,10 +78,10 @@ function shop_manager_fetch_products_callback() {
                 'work_time_minutes' => $work_time_minutes,
                 'development_cost' => $development_cost,
                 'development_months' => $development_months,
-            );
+            ];
         }
     }
-    
+
     wp_reset_postdata();
     wp_send_json_success($products_data);
 }

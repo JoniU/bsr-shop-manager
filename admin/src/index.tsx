@@ -1,10 +1,9 @@
 import React from 'react';
-import ReactDOM from 'react-dom';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter as Router, useLocation } from 'react-router-dom';
-import App from './App';
 import ProductEditor from './ProductEditor';
 import Dashboard from './Dashboard';
+import ProductOrderData from './ProductOrderData';
 import '@assets/styles.css';
 
 // Helper to get query parameters from the URL
@@ -21,6 +20,9 @@ const QueryRouter = () => {
     if (page === 'shop-manager') {
         if (subPage === 'product-editor') {
             return <ProductEditor />;
+        }
+        if (subPage === 'product-order-data') {
+            return <ProductOrderData />;
         }
         return <Dashboard />;
     }
@@ -47,6 +49,12 @@ if (rootElement) {
                     className={`nav-tab ${window.location.search.includes('shop-manager=product-editor') ? 'nav-tab-active' : ''}`}
                 >
                     Product Editor
+                </a>
+                                <a
+                    href="/wp-admin/admin.php?page=shop-manager&shop-manager=product-order-data"
+                    className={`nav-tab ${window.location.search.includes('shop-manager=product-order-data') ? 'nav-tab-active' : ''}`}
+                >
+                    Product Order Data
                 </a>
             </nav>
             <QueryRouter />

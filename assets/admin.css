@@ -1,0 +1,30 @@
+.notice,
+.notice-warning,
+.update-nag,
+#wpfooter {
+    display: none;
+}
+
+#wpcontent {
+    padding-left: 0px;
+}
+
+#wpadminbar {
+    display: none;
+}
+
+#adminmenumain {
+    display: none;
+}
+
+#wpcontent {
+    margin-left: 0px;
+}
+
+#wpbody-content {
+    padding-bottom: 0px;
+}
+
+#__nuxt {
+    all: unset;
+}

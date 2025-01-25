@@ -1,0 +1,49 @@
+@import "tailwindcss";
+@import "@nuxt/ui";
+
+body {
+    margin: 0;
+}
+
+@layer base {
+    .app {
+        background-color: var(--ui-bg-light);
+        /* Default light mode */
+        color: var(--ui-text-light);
+        /* Default text color */
+    }
+
+    .app.dark {
+        background-color: var(--ui-bg);
+        color: var(--ui-text);
+        -webkit-font-smoothing: antialiased;
+    }
+
+    .dark {
+        color-scheme: dark;
+    }
+}
+
+@theme {
+    --color-primary: var(--ui-primary);
+    --color-secondary: var(--ui-secondary);
+    --color-accent: var(--ui-accent);
+    --color-accent-muted: var(--ui-accent-muted);
+    --color-info: var(--ui-info);
+    --color-success: var(--ui-success);
+    --color-warning: var(--ui-warning);
+    --color-error: var(--ui-error);
+    --color-neutral: var(--ui-neutral);
+    --color-text: var(--ui-text);
+    --color-text-muted: var(--ui-text-muted);
+    --color-text-highlighted: var(--ui-text-highlighted);
+    --color-text-dimmed: var(--ui-text-dimmed);
+    --color-bg: var(--ui-bg);
+    --color-bg-muted: var(--ui-bg-muted);
+    --color-bg-elevated: var(--ui-bg-elevated);
+    --color-border: var(--ui-border);
+    --color-border-accented: var(--ui-border-accented);
+    --font-sans: var(--font-sans);
+    --font-serif: var(--font-serif);
+    --font-mono: var(--font-mono);
+}

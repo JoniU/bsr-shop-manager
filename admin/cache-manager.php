@@ -13,15 +13,13 @@ function shop_manager_generate_cache()
         error_log('shop_manager_generate_cache called');
     }
 
-    if (defined('WP_CLI') && WP_CLI) {
-        WP_CLI::runcommand('shop_manager:generate_cache');
-    } else {
-        try {
-            require_once plugin_dir_path(__FILE__) . 'generate-data-cache.php';
-        } catch (Exception $e) {
-            error_log('Cache generation failed: ' . $e->getMessage());
-            throw new Exception('Cache generation failed: ' . $e->getMessage());
-        }
+    try {
+        // Call the actual cache generation function
+        require_once plugin_dir_path(__FILE__) . 'generate-data-cache.php';
+        shop_manager_generate_data_cache(false); // Pass `false` for logging to WP-CLI
+    } catch (Exception $e) {
+        error_log('Cache generation failed: ' . $e->getMessage());
+        throw new Exception('Cache generation failed: ' . $e->getMessage());
     }
 }
 
@@ -97,3 +95,10 @@ add_action('shop_manager_daily_cache_regeneration', function () {
         error_log('Daily cache regeneration completed successfully.');
     }
 });
+
+// Register WP-CLI command
+if (defined('WP_CLI') && WP_CLI) {
+    WP_CLI::add_command('shop_manager:generate_cache', function () {
+        shop_manager_generate_data_cache(true);
+    });
+}
