@@ -51,8 +51,8 @@ function renderChart(granularity: string, newReport: ReportData) {
                         entry.work_time_minutes +
                         entry.development_cost)
             ),
-            backgroundColor: "rgba(5, 224, 114, 1)", // Green 500
-            borderColor: "rgba(5, 224, 114, 0.4)", // Gray 500
+            backgroundColor: "rgba(5, 224, 114, 0.4)", // Green 500
+            borderColor: "rgba(5, 224, 114, 1)", // Gray 500
             borderWidth: 3,
         },
         {
@@ -90,7 +90,7 @@ function renderChart(granularity: string, newReport: ReportData) {
         {
             label: "Tax",
             data: aggregatedData.map((entry) => entry.tax),
-            backgroundColor: "oklch(0.279 0.041 260.031)", // Red 500
+            backgroundColor: "rgb(54, 65, 83)", // Red 500
         },
     ];
 

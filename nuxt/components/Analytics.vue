@@ -40,8 +40,12 @@
             </div>
         </div>
         <div v-if="filteredReport">
-            <ChartTimelineStacked :report="filteredReport" :selectedGranularity="selectedGranularity" />
-            <ChartTimeline :report="filteredReport" :selectedGranularity="selectedGranularity" />
+            <div class="m-2 p-2 rounded-md shadow-md bg-elevated border-1 border-gray-700 dark:bg-gray-800">
+                <ChartTimelineStacked :report="filteredReport" :selectedGranularity="selectedGranularity" />
+            </div>
+            <div class="m-2 p-2 rounded-md shadow-md bg-elevated border-1 border-gray-700 dark:bg-gray-800">
+                <ChartTimeline :report="filteredReport" :selectedGranularity="selectedGranularity" />
+            </div>
         </div>
     </div>
 </template>

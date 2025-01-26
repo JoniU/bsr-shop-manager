@@ -81,7 +81,7 @@ function renderChart(granularity: string, newReport: ReportData) {
                 },
                 y: {
                     title: {
-                        display: true,
+                        display: false,
                         text: "Total",
                     },
                     beginAtZero: true,
