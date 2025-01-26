@@ -1,59 +1,61 @@
+<template>
+    <canvas id="TotalTimeline"></canvas>
+</template>
+
 <script setup lang="ts">
 import { onMounted, ref, watch } from "vue";
 import { Chart } from "chart.js/auto";
 import { getISOWeek } from "@/utils/dateUtils";
-
+import type { ReportData } from "@/types/timelineReport.ts"
 import type { ChartType } from "chart.js/auto";
 
 const props = defineProps({
     report: {
-        type: Object as () => ReportData, // Correctly define the prop as an object
+        type: Object,
+        required: true,
+    },
+    selectedGranularity: {
+        type: String, // Expecting a string value for granularity
         required: true,
     },
 });
 
-// Define the expected structure of the report data
-interface ReportData {
-    [key: string]: {
-        total: number;
-        discount: number;
-        shipping: number;
-        tax: number;
-        shipping_tax: number;
-        quantity: number;
-        cogs_price: number;
-        packing_cost: number;
-        work_time_minutes: number;
-        development_cost: number;
-        development_months: number;
-    };
-}
+const selectedGranularity = computed(() => props.selectedGranularity);
+const report = computed(() => props.report);
 
-// Granularity options
-const items = ref(["Day", "Week", "Month", "Year"]);
-const selectedGranularity = ref("Month"); // Default granularity
-
-const apiUrl = `${useRuntimeConfig().public.baseUrl}/wp-json/custom/v1/profit-time`;
 const chartInstance = ref<Chart | null>(null);
 
-// Fetch and render chart
-async function renderChart(granularity: string) {
-    const reportData = props.report as ReportData;
+// Watch for changes in granularity and update the chart
+watch(
+    [selectedGranularity, report],
+    ([newGranularity, newReport]) => {
+        renderChart(newGranularity, newReport); // Re-render chart on changes
+    },
+    { deep: true } // Watch deeply for nested changes in report
+);
 
-    // Aggregate data based on granularity
-    const aggregatedData = aggregateData(reportData, granularity.toLowerCase());
+// Fetch and render chart
+function renderChart(granularity: string, newReport: ReportData) {
+    const aggregatedData = aggregateData(newReport, granularity.toLowerCase());
 
     // Prepare the data for the chart
     const labels = aggregatedData.map((entry) => entry.date);
     const totals = aggregatedData.map((entry) => entry.total);
 
-    // Destroy the previous chart instance if it exists
-    if (chartInstance.value) {
-        chartInstance.value.destroy();
+    // Create the chart
+    const ctx = document.getElementById("TotalTimeline") as HTMLCanvasElement;
+
+    if (!ctx) {
+        console.error("Failed to get canvas context.");
+        return;
     }
 
-    // Create the chart
-    const ctx = document.getElementById("orderTotalsChart") as HTMLCanvasElement;
+    // Destroy the existing chart instance to avoid conflicts
+    if (chartInstance.value) {
+        chartInstance.value.destroy();
+        chartInstance.value = null; // Explicitly set it to null
+    }
+
     chartInstance.value = new Chart(ctx, {
         type: "bar" as ChartType,
         data: {
@@ -167,24 +169,9 @@ function aggregateData(reportData: ReportData, granularity: string) {
 
 }
 
-// Watch for changes in granularity and update the chart
-watch(selectedGranularity, (newGranularity) => {
-    renderChart(newGranularity);
-});
-
-onMounted(() => renderChart(selectedGranularity.value));
+onMounted(() => renderChart(selectedGranularity.value, report.value));
 
 </script>
-
-<template>
-    <div class="space-y-4 p-4">
-        <!-- Radio Group for Granularity -->
-        <URadioGroup orientation="horizontal" v-model="selectedGranularity" :items="items" />
-
-        <!-- Chart Container -->
-        <canvas id="orderTotalsChart"></canvas>
-    </div>
-</template>
 
 <style scoped>
 canvas {

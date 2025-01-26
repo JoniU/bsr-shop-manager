@@ -1,53 +1,41 @@
 <template>
-    <div class="space-y-4 p-4">
-        <URadioGroup orientation="horizontal" v-model="selectedGranularity" :items="items" />
-        <canvas id="stackedChart"></canvas>
-    </div>
+    <canvas id="turnoverStacked"></canvas>
 </template>
 
 <script setup lang="ts">
 import { ref, watch } from "vue";
 import { Chart } from "chart.js/auto";
 import { getISOWeek } from "@/utils/dateUtils"; // Assuming the utility is moved to a separate file
-
-// Define the expected structure of the report data
-interface ReportData {
-    [key: string]: {
-        total: number;
-        discount: number;
-        shipping: number;
-        tax: number;
-        shipping_tax: number;
-        quantity: number;
-        cogs_price: number;
-        packing_cost: number;
-        work_time_minutes: number;
-        development_cost: number;
-        development_months: number;
-    };
-}
-
+import type { ReportData } from "@/types/timelineReport.ts"
 
 const props = defineProps({
     report: {
         type: Object,
         required: true,
     },
+    selectedGranularity: {
+        type: String, // Expecting a string value for granularity
+        required: true,
+    },
 });
 
-const items = ref(["Day", "Week", "Month", "Year"]);
-const selectedGranularity = ref("Month");
+const selectedGranularity = computed(() => props.selectedGranularity);
+const report = computed(() => props.report);
 
 const chartInstance = ref<Chart | null>(null);
 
 // Watch for changes in granularity and update the chart
-watch(selectedGranularity, (newGranularity) => {
-    renderChart(newGranularity);
-});
+watch(
+    [selectedGranularity, report],
+    ([newGranularity, newReport]) => {
+        renderChart(newGranularity, newReport); // Re-render chart on changes
+    },
+    { deep: true } // Watch deeply for nested changes in report
+);
 
 // Render the chart
-function renderChart(granularity: string) {
-    const aggregatedData = aggregateData(props.report, granularity.toLowerCase());
+function renderChart(granularity: string, newReport: ReportData) {
+    const aggregatedData = aggregateData(newReport, granularity.toLowerCase());
 
     const datasets = [
         {
@@ -97,11 +85,19 @@ function renderChart(granularity: string) {
         },
     ];
 
-    if (chartInstance.value) {
-        chartInstance.value.destroy();
+    const ctx = document.getElementById("turnoverStacked") as HTMLCanvasElement;
+
+    if (!ctx) {
+        console.error("Failed to get canvas context.");
+        return;
     }
 
-    const ctx = document.getElementById("stackedChart") as HTMLCanvasElement;
+    // Destroy the existing chart instance to avoid conflicts
+    if (chartInstance.value) {
+        chartInstance.value.destroy();
+        chartInstance.value = null; // Explicitly set it to null
+    }
+
     chartInstance.value = new Chart(ctx, {
         type: "bar",
         data: {
@@ -200,12 +196,8 @@ function aggregateData(reportData: ReportData, granularity: string) {
         });
 
 }
-// Watch for changes in granularity and update the chart
-watch(selectedGranularity, (newGranularity) => {
-    renderChart(newGranularity);
-});
 
-onMounted(() => renderChart(selectedGranularity.value));
+onMounted(() => renderChart(selectedGranularity.value, report.value));
 </script>
 
 <style scoped>
