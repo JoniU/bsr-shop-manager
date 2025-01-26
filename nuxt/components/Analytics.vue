@@ -14,6 +14,7 @@ import { ref } from "vue";
 const report = ref(null);
 const isLoading = ref(false);
 const error = ref(null);
+const loading = ref(null);
 
 const apiUrl = `${useRuntimeConfig().public.baseUrl}/wp-json/custom/v1/profit-time`;
 

@@ -26,29 +26,50 @@ function get_order_product_report_api(WP_REST_Request $request)
 
 function generate_and_cache_report($force_regenerate = false)
 {
+    // Define cache file path
     $upload_dir = wp_upload_dir();
-    $cache_file = trailingslashit($upload_dir['basedir']) . 'bsr-shop-manager/order_product_report.json';
+    $cache_file = trailingslashit($upload_dir['basedir']) . 'bsr-shop-manager/profit_timeline.json';
     $cache_lifetime = 24 * 60 * 60; // Cache duration in seconds (24 hours)
 
     // Check if the cache file exists and is valid
     if (!$force_regenerate && file_exists($cache_file) && time() - filemtime($cache_file) < $cache_lifetime) {
         $data = file_get_contents($cache_file);
+
         if ($data === false) {
+            error_log("Failed to read cached report file: $cache_file");
             return new WP_Error('file_read_error', 'Failed to read cached report file.', ['status' => 500]);
         }
-        return json_decode($data, true);
+
+        $decoded_data = json_decode($data, true);
+
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            error_log('JSON decoding error: ' . json_last_error_msg());
+            return new WP_Error('json_decode_error', 'Failed to decode cached report JSON.', ['status' => 500]);
+        }
+
+        return $decoded_data;
     }
 
     // Generate the report
     $report = generate_order_product_report();
+
     if (is_wp_error($report)) {
+        error_log('Report generation failed: ' . $report->get_error_message());
         return $report; // Return the error if generation failed
     }
 
     // Save the report to the cache file
-    $result = file_put_contents($cache_file, json_encode($report, JSON_PRETTY_PRINT));
-    if ($result === false) {
-        return new WP_Error('file_write_error', 'Failed to write report to cache file.', ['status' => 500]);
+    $temp_file = $cache_file . '.tmp';
+
+    if (file_put_contents($temp_file, json_encode($report, JSON_PRETTY_PRINT)) === false) {
+        error_log("Failed to write temporary report file: $temp_file");
+        return new WP_Error('file_write_error', 'Failed to write report to temporary file.', ['status' => 500]);
+    }
+
+    // Safely replace the old cache file
+    if (!rename($temp_file, $cache_file)) {
+        error_log("Failed to replace cache file: $cache_file");
+        return new WP_Error('file_replace_error', 'Failed to replace the old report cache file.', ['status' => 500]);
     }
 
     return $report;

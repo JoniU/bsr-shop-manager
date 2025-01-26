@@ -47,7 +47,7 @@ async function handleFetchOrder() {
 
     try {
         let currentPage = 1;
-        const perPage = 50;
+        const perPage = 200;
         let totalPages = 1; // Will update dynamically after the first fetch
 
         do {
@@ -77,24 +77,50 @@ async function handleFetchOrder() {
     }
 }
 
-// Function to regenerate the file
+// Function to regenerate the file using the paginated API
 async function handleRegenerateFile() {
     isLoading.value = true;
     errorMessage.value = '';
     successMessage.value = '';
+    let currentPage = 1;
+    const perPage = 200; // Adjust as needed
+    let hasMoreData = true;
+    const pageLimit = 150; // Limit to prevent infinite loops
 
     try {
-        // Ensure the correct endpoint
-        const data = await $fetch(`${apiUrl}?regenerate=true`, {
-            method: 'GET',
-            credentials: 'include', // Ensures cookies for authentication
-        });
+        while (hasMoreData) {
+            // Determine if this is the last page
+            const isLastPage = currentPage >= pageLimit;
+
+            // Call the paginated API endpoint
+            const response = await $fetch(
+                `${apiUrl}-flush?page=${currentPage}&per_page=${perPage}&last=${isLastPage}`,
+                {
+                    method: 'GET',
+                    credentials: 'include', // Ensures cookies for authentication
+                }
+            );
+
+            console.log(
+                `Processed page ${currentPage}, orders: ${response.orders_count}`
+            );
+
+            // Check if there are more orders to process
+            if (response.orders_count < perPage || isLastPage) {
+                hasMoreData = false; // Exit loop if no more data or we're on the last page
+                console.log(`No more data to fetch`);
+            } else {
+                currentPage++; // Move to the next page
+            }
+        }
         successMessage.value = 'File regenerated successfully!';
     } catch (error) {
         console.error('Error regenerating file:', error);
-        errorMessage.value = 'Failed to regenerate the file. Please check the API.';
+        errorMessage.value =
+            'Failed to regenerate the file. Please check the API.';
     } finally {
         isLoading.value = false;
+        currentPage = 1;
     }
 }
 
