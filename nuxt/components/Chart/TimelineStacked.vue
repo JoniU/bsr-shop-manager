@@ -39,36 +39,6 @@ function renderChart(granularity: string, newReport: ReportData) {
 
     const datasets = [
         {
-            label: "Shipping",
-            data: aggregatedData.map((entry) => entry.shipping),
-            backgroundColor: "#3B82F6", // Blue 500
-        },
-        {
-            label: "Tax",
-            data: aggregatedData.map((entry) => entry.tax),
-            backgroundColor: "oklch(0.704 0.191 22.216)", // Red 500
-        },
-        {
-            label: "Shipping Tax",
-            data: aggregatedData.map((entry) => entry.shipping_tax),
-            backgroundColor: "oklch(0.852 0.199 91.936)", // Yellow 500
-        },
-        {
-            label: "COGS (Cost of Goods Sold)",
-            data: aggregatedData.map((entry) => entry.cogs_price),
-            backgroundColor: "oklch(0.707 0.165 254.624)", // Gray 500
-        },
-        {
-            label: "Packing Cost",
-            data: aggregatedData.map((entry) => entry.packing_cost),
-            backgroundColor: "oklch(0.905 0.182 98.111)", // Indigo 500
-        },
-        {
-            label: "Work Cost",
-            data: aggregatedData.map((entry) => entry.work_time_minutes),
-            backgroundColor: "oklch(0.681 0.162 75.834)", // Orange 500
-        },
-        {
             label: "Profit",
             data: aggregatedData.map(
                 (entry) =>
@@ -81,7 +51,46 @@ function renderChart(granularity: string, newReport: ReportData) {
                         entry.work_time_minutes +
                         entry.development_cost)
             ),
-            backgroundColor: "oklch(0.792 0.209 151.711)", // Green 500
+            backgroundColor: "rgba(5, 224, 114, 1)", // Green 500
+            borderColor: "rgba(5, 224, 114, 0.4)", // Gray 500
+            borderWidth: 3,
+        },
+        {
+            label: "Cost of Goods",
+            data: aggregatedData.map((entry) => entry.cogs_price),
+            backgroundColor: "rgba(251, 44, 54, 0.4)", // Gray 500
+            borderColor: "rgba(251, 44, 54, 0.8)", // Gray 500
+            borderWidth: 3,
+
+        },
+        {
+            label: "Work Cost",
+            data: aggregatedData.map((entry) => entry.work_time_minutes),
+            backgroundColor: "rgba(230, 0, 118, 0.4)", // Orange 500
+            borderColor: "rgba(230, 0, 118, 1)", // Gray 500
+            borderWidth: 3,
+        },
+        {
+            label: "Packing Cost",
+            data: aggregatedData.map((entry) => entry.packing_cost),
+            backgroundColor: "rgba(68, 0, 183, 0.4)", // Orange 500
+            borderColor: "rgba(68, 0, 183, 1)", // Gray 500
+            borderWidth: 3,
+        },
+        {
+            label: "Shipping",
+            data: aggregatedData.map((entry) => entry.shipping),
+            backgroundColor: "oklch(0.446 0.043 257.281)", // Blue 500
+        },
+        {
+            label: "Shipping Tax",
+            data: aggregatedData.map((entry) => entry.shipping_tax),
+            backgroundColor: "oklch(0.372 0.044 257.287)", // Yellow 500
+        },
+        {
+            label: "Tax",
+            data: aggregatedData.map((entry) => entry.tax),
+            backgroundColor: "oklch(0.279 0.041 260.031)", // Red 500
         },
     ];
 
@@ -113,6 +122,14 @@ function renderChart(granularity: string, newReport: ReportData) {
                 y: {
                     stacked: true,
                     beginAtZero: true,
+                },
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        usePointStyle: true, // Use a point style for labels
+                        pointStyle: "circle",
+                    },
                 },
             },
         },

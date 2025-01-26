@@ -64,9 +64,9 @@ function renderChart(granularity: string, newReport: ReportData) {
                 {
                     label: "Total Sales",
                     data: totals,
-                    backgroundColor: "rgba(75, 192, 192, 0.2)",
-                    borderColor: "rgba(75, 192, 192, 1)",
-                    borderWidth: 1,
+                    backgroundColor: "rgba(81, 162, 255, 0.4)",
+                    borderColor: "rgba(81, 162, 255)",
+                    borderWidth: 3,
                 },
             ],
         },
@@ -85,6 +85,14 @@ function renderChart(granularity: string, newReport: ReportData) {
                         text: "Total",
                     },
                     beginAtZero: true,
+                },
+            },
+            plugins: {
+                legend: {
+                    labels: {
+                        usePointStyle: true, // Use a point style for labels
+                        pointStyle: "circle",
+                    },
                 },
             },
         },
