@@ -5,10 +5,10 @@ const path = require('path');
 const remoteSSH = process.env.REMOTE_SSH;
 const remotePath = process.env.REMOTE_PATH;
 const sshPort = process.env.SSH_PORT;
-const localPath = process.cwd();
+const localPath = '/Users/joni/blacksmokeracing.com/wp-content/plugins/bsr-shop-manager/';
 
 // Inline exclusions
-const exclusionsFile = "/Users/joni/blacksmokeracing.com/wp-content/plugins/bsr-shop-manager/deploy-exclusions.txt ";
+const exclusionsFile = '/Users/joni/blacksmokeracing.com/wp-content/plugins/bsr-shop-manager/deploy-exclusions.txt';
 
 if (!remoteSSH || !remotePath || !sshPort) {
     console.error('Error: Missing required environment variables.');
