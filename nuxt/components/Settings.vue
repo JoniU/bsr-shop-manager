@@ -2,6 +2,10 @@
     <div class="w-full space-y-8">
         <!-- Costs Table -->
         <div>
+            <h3 class="text-xl font-semibold m-2 mt-4">Monthly target</h3>
+            <UInput v-model="monthlyTarget" />
+        </div>
+        <div>
             <h3 class="text-xl font-semibold m-2 mt-4">General fixed Costs</h3>
             <div class="overflow-x-auto">
                 <table class="border-collapse w-full">
@@ -14,13 +18,18 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="year in years" :key="year"
-                            class="odd:bg-gray-50 even:bg-gray-100 dark:odd:bg-gray-800 dark:even:bg-gray-900">
-                            <td :class="classTd" class="text-center">{{ year }}
-                            </td>
+                        <tr
+                            v-for="year in years"
+                            :key="year"
+                            class="odd:bg-gray-50 even:bg-gray-100 dark:odd:bg-gray-800 dark:even:bg-gray-900"
+                        >
+                            <td :class="classTd" class="text-center">{{ year }}</td>
                             <td v-for="(value, index) in costs[year]" :key="index" :class="classTd" class="text-right">
-                                <input type="number" v-model.number="costs[year][index]"
-                                    class="w-full bg-transparent text-right border-none focus:outline-none" />
+                                <input
+                                    type="number"
+                                    v-model.number="costs[year][index]"
+                                    class="w-full bg-transparent text-right border-none focus:outline-none"
+                                />
                             </td>
                         </tr>
                     </tbody>
@@ -42,13 +51,23 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="year in years" :key="year"
-                            class="odd:bg-gray-50 even:bg-gray-100 dark:odd:bg-gray-800 dark:even:bg-gray-900">
+                        <tr
+                            v-for="year in years"
+                            :key="year"
+                            class="odd:bg-gray-50 even:bg-gray-100 dark:odd:bg-gray-800 dark:even:bg-gray-900"
+                        >
                             <td :class="classTd" class="text-center">{{ year }}</td>
-                            <td v-for="(value, index) in marketingCosts[year]" :key="index" :class="classTd"
-                                class="text-right">
-                                <input type="number" v-model.number="marketingCosts[year][index]"
-                                    class="w-full bg-transparent text-right border-none focus:outline-none" />
+                            <td
+                                v-for="(value, index) in marketingCosts[year]"
+                                :key="index"
+                                :class="classTd"
+                                class="text-right"
+                            >
+                                <input
+                                    type="number"
+                                    v-model.number="marketingCosts[year][index]"
+                                    class="w-full bg-transparent text-right border-none focus:outline-none"
+                                />
                             </td>
                         </tr>
                     </tbody>
@@ -70,13 +89,18 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr v-for="year in years" :key="year"
-                            class="odd:bg-gray-50 even:bg-gray-100 dark:odd:bg-gray-800 dark:even:bg-gray-900">
-                            <td :class="classTd" class="text-center">{{ year }}
-                            </td>
+                        <tr
+                            v-for="year in years"
+                            :key="year"
+                            class="odd:bg-gray-50 even:bg-gray-100 dark:odd:bg-gray-800 dark:even:bg-gray-900"
+                        >
+                            <td :class="classTd" class="text-center">{{ year }}</td>
                             <td v-for="(value, index) in rent[year]" :key="index" :class="classTd" class="text-right">
-                                <input type="number" v-model.number="rent[year][index]"
-                                    class="w-full bg-transparent text-right border-none focus:outline-none" />
+                                <input
+                                    type="number"
+                                    v-model.number="rent[year][index]"
+                                    class="w-full bg-transparent text-right border-none focus:outline-none"
+                                />
                             </td>
                         </tr>
                     </tbody>
@@ -85,14 +109,11 @@
         </div>
     </div>
     <div class="p-4">
-        <UButton @click="saveSettings" color="success" variant="solid" :disabled="loading">
-            Save Settings
-        </UButton>
+        <UButton @click="saveSettings" color="success" variant="solid" :disabled="loading"> Save Settings </UButton>
 
         <p v-if="error" class="text-red-500 mt-2">{{ error }}</p>
     </div>
 </template>
-
 
 <script setup lang="ts">
 import { ref, computed } from 'vue';
@@ -101,16 +122,15 @@ import axios from 'axios';
 // Generate years and months dynamically
 const currentYear = new Date().getFullYear();
 const years = ref<number[]>(Array.from({ length: currentYear - 2020 + 1 }, (_, i) => 2020 + i));
-const months = ref<string[]>([
-    'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec',
-]);
-const classTd = "border border-gray-300 dark:border-gray-700 px0 py-2 text-sm";
-const classTh = "border-b border-gray-300 dark:border-gray-700 px-4 py-2";
+const months = ref<string[]>(['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']);
+const classTd = 'border border-gray-300 dark:border-gray-700 px0 py-2 text-sm';
+const classTh = 'border-b border-gray-300 dark:border-gray-700 px-4 py-2';
 
 // Initialize data for costs, marketing-cost, and rent
 const costs = ref<Record<number, number[]>>(generateEmptyData());
 const marketingCosts = ref<Record<number, number[]>>(generateEmptyData());
 const rent = ref<Record<number, number[]>>(generateEmptyData());
+const monthlyTarget = ref<number>(0);
 
 // Function to generate an empty data structure for the tables
 function generateEmptyData() {
@@ -139,12 +159,18 @@ async function fetchSettings() {
         console.log(`Fetching settings from: ${apiUrl}`);
         const response = await axios.get(apiUrl);
         console.log('Settings fetched:', response.data);
-        const { costs: savedCosts, marketingCosts: savedMarketingCosts, rent: savedRent } = response.data;
+        const {
+            costs: savedCosts,
+            marketingCosts: savedMarketingCosts,
+            rent: savedRent,
+            monthlyTarget: savedMonthlyTarget,
+        } = response.data;
 
         // Update the local state with fetched data
         costs.value = savedCosts || generateEmptyData();
         marketingCosts.value = savedMarketingCosts || generateEmptyData();
         rent.value = savedRent || generateEmptyData();
+        monthlyTarget.value = savedMonthlyTarget || 0;
     } catch (err) {
         error.value = 'Failed to fetch settings.';
         console.error(err);
@@ -162,6 +188,7 @@ async function saveSettings() {
         costs: costs.value,
         marketingCosts: marketingCosts.value,
         rent: rent.value,
+        monthlyTarget: monthlyTarget.value,
     };
 
     try {
@@ -176,5 +203,4 @@ async function saveSettings() {
 
 // Initialize data on component mount
 onMounted(fetchSettings);
-
 </script>
