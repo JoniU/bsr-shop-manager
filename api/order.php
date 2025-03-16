@@ -23,9 +23,9 @@ add_action('rest_api_init', function () {
 });
 
 add_action('rest_api_init', function () {
-    register_rest_route('custom/v1', '/order-flush', [
+    register_rest_route('custom/v1', '/order-live', [
         'methods' => 'GET',
-        'callback' => 'shop_manager_paginated_orders_to_json',
+        'callback' => 'shop_manager_last_days_orders',
         'permission_callback' => '__return_true',
     ]);
 });
@@ -35,41 +35,45 @@ add_action('rest_api_init', function () {
  */
 function shop_manager_get_orders_data(WP_REST_Request $request)
 {
-    $page = absint($request->get_param('page')) ?: 1; // Default to page 1
-    $per_page = absint($request->get_param('per_page')) ?: 80; // Default to 100 orders per page
+    // Before fetching, update the table with the 50 newest orders.
+    // This call updates or inserts the 50 most recent orders without affecting backfill tracking.
+    shop_manager_store_orders_db(true);
 
-    // Regenerate cache if requested
-    $regenerate = $request->get_param('regenerate') === 'true';
-    if ($regenerate) {
-        $success = shop_manager_store_all_orders_to_json();
-        if (!$success) {
-            return new WP_Error('regeneration_failed', 'Failed to regenerate the cache file.', ['status' => 500]);
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'shop_manager_orders';
+
+    $page = absint($request->get_param('page')) ?: 1; // Default to page 1
+    $per_page = absint($request->get_param('per_page')) ?: 80;
+
+    // Get the total number of orders stored in the custom table.
+    $total_orders = intval($wpdb->get_var("SELECT COUNT(*) FROM {$table_name}"));
+    $total_pages = $total_orders > 0 ? ceil($total_orders / $per_page) : 1;
+
+    // Calculate offset for pagination.
+    $offset = ($page - 1) * $per_page;
+
+    // Retrieve paginated orders ordered by date_created descending (newest first)
+    $results = $wpdb->get_results(
+        $wpdb->prepare(
+            "SELECT order_data FROM {$table_name} ORDER BY date_created DESC LIMIT %d, %d",
+            $offset,
+            $per_page,
+        ),
+    );
+
+    // Decode the JSON order data into an array.
+    $orders = [];
+    if (!empty($results)) {
+        foreach ($results as $row) {
+            $order = json_decode($row->order_data, true);
+            if ($order) {
+                $orders[] = $order;
+            }
         }
     }
 
-    // Define the JSON file path
-    $upload_dir = wp_upload_dir();
-    $cache_file = trailingslashit($upload_dir['basedir']) . 'bsr-shop-manager/all_orders.json';
-
-    // Read cached file
-    if (!file_exists($cache_file)) {
-        return new WP_Error('no_cache_file', 'The cache file does not exist.', ['status' => 500]);
-    }
-
-    $data = file_get_contents($cache_file);
-    if ($data === false) {
-        return new WP_Error('file_read_error', 'Failed to read the cache file.', ['status' => 500]);
-    }
-
-    $orders = json_decode($data, true)['orders'] ?? [];
-    $total_orders = count($orders);
-    $total_pages = ceil($total_orders / $per_page);
-
-    // Paginate the orders
-    $paginated_orders = array_slice($orders, ($page - 1) * $per_page, $per_page);
-
     return rest_ensure_response([
-        'orders' => $paginated_orders,
+        'orders' => $orders,
         'meta' => [
             'total_orders' => $total_orders,
             'total_pages' => $total_pages,
@@ -139,120 +143,6 @@ function shop_manager_get_order_by_id(WP_REST_Request $request)
 
     // Return the raw order data
     return rest_ensure_response($order_data);
-}
-
-function shop_manager_paginated_orders_to_json(WP_REST_Request $request)
-{
-    $page = max(1, intval($request->get_param('page') ?: 1));
-    $per_page = max(1, intval($request->get_param('per_page') ?: 100));
-    $is_last = $request->get_param('last') === 'true'; // Detect if explicitly marked as last
-
-    error_log("Processing page: $page");
-    error_log('Memory usage before query: ' . memory_get_usage(true) . ' bytes');
-
-    // Define the JSON file path
-    $upload_dir = wp_upload_dir();
-    $cache_file = trailingslashit($upload_dir['basedir']) . 'bsr-shop-manager/all_orders.json';
-    $temp_file = $cache_file . '.tmp'; // Temporary file for safer writes
-
-    // Ensure the directory exists
-    wp_mkdir_p(dirname($cache_file));
-
-    // Open the file for writing or appending
-    $is_new_file = $page === 1 && !file_exists($cache_file);
-    $file_handle = fopen($is_new_file ? $temp_file : $cache_file, $page === 1 ? 'w' : 'a');
-    if (!$file_handle) {
-        error_log("Failed to open cache file for writing: $cache_file");
-        return new WP_Error('file_open_failed', 'Failed to open the cache file.', ['status' => 500]);
-    }
-
-    // If this is the first page, write the JSON array opening
-    if ($page === 1) {
-        fwrite($file_handle, '{"orders":[');
-    }
-
-    $args = [
-        'limit' => $per_page,
-        'page' => $page,
-        'status' => ['wc-completed', 'wc-processing'], // Order statuses
-        'type' => 'shop_order', // Post type
-    ];
-
-    $query = new WC_Order_Query($args);
-    $orders = $query->get_orders();
-
-    if (empty($orders)) {
-        // No orders to process; close JSON properly if on the first page
-        if ($page === 1) {
-            fwrite($file_handle, ']}');
-            fclose($file_handle);
-            rename($temp_file, $cache_file); // Rename temp file to final file
-        }
-        return rest_ensure_response(['message' => 'No more orders to process']);
-    }
-
-    $is_first_item = $page === 1;
-
-    foreach ($orders as $order) {
-        $order_data = shop_manager_format_order_data($order);
-
-        // Add a comma if this is not the first item
-        if (!$is_first_item) {
-            fwrite($file_handle, ',');
-        } else {
-            $is_first_item = false;
-        }
-
-        fwrite($file_handle, json_encode($order_data));
-        fflush($file_handle); // Ensure data is written to disk
-        unset($order); // Free memory
-    }
-
-    // Close JSON only if it's the last page or explicitly marked as last
-    // Close JSON only if it's the last page or explicitly marked as last
-    if (count($orders) < $per_page || $is_last) {
-        fwrite($file_handle, ']}'); // Close the array and object
-        fclose($file_handle);
-
-        // If using a temp file, rename it to the final file
-        if ($is_new_file) {
-            rename($temp_file, $cache_file);
-        }
-
-        // Validate the last few bytes of the file to ensure proper JSON closure
-        $file_handle = fopen($cache_file, 'r+');
-        if ($file_handle) {
-            fseek($file_handle, -10, SEEK_END); // Move to the last 10 bytes of the file
-            $end_chunk = fread($file_handle, 10); // Read the last 10 bytes
-
-            if (!str_contains($end_chunk, ']}')) {
-                error_log('Invalid JSON detected: fixing the end of the file.');
-
-                // Fix the end of the file
-                fseek($file_handle, -strlen($end_chunk), SEEK_END);
-                fwrite($file_handle, rtrim($end_chunk, ',') . ']}');
-            } else {
-                error_log('JSON file is valid.');
-            }
-
-            fclose($file_handle);
-        } else {
-            error_log('Failed to open the file for validation.');
-        }
-
-        // Log memory usage
-        error_log('Final memory usage: ' . memory_get_usage(true) . ' bytes');
-    } else {
-        fclose($file_handle);
-    }
-
-    gc_collect_cycles();
-
-    return rest_ensure_response([
-        'message' => 'Orders processed successfully.',
-        'page' => $page,
-        'orders_count' => count($orders),
-    ]);
 }
 
 function shop_manager_format_order_data($order)
@@ -326,3 +216,341 @@ function shop_manager_format_order_data($order)
 
     return $order_data;
 }
+
+function shop_manager_last_days_orders(WP_REST_Request $request)
+{
+    // Get the 'days' parameter or default to 32
+    $days = max(1, intval($request->get_param('days') ?: 32));
+
+    // Calculate the start date based on the 'days' parameter
+    $start_date = (new DateTime())
+        ->modify("-$days days")
+        ->format('Y-m-d H:i:s');
+
+    // Log the start date for debugging
+    error_log("Start date: $start_date");
+
+    // Query WooCommerce orders from the last N days
+    $args = [
+        'date_created' => '>' . $start_date, // Ensure the format is correct
+        'status' => ['wc-completed', 'wc-processing'], // Include desired order statuses
+        'type' => 'shop_order', // Post type
+        'limit' => -1, // Ensure no limit on the number of orders fetched
+    ];
+
+    $query = new WC_Order_Query($args);
+    $orders = $query->get_orders();
+
+    // Log the number of orders for debugging
+    error_log('Number of orders: ' . count($orders));
+
+    if (empty($orders)) {
+        return rest_ensure_response(['message' => 'No orders found for the specified period.']);
+    }
+
+    // Format the orders data
+    $report = [];
+    foreach ($orders as $order) {
+        $order_data = shop_manager_format_order_data($order);
+
+        // Use the order date as the key
+        $date = $order->get_date_created()->format('Y-m-d');
+        if (!isset($report[$date])) {
+            $report[$date] = [
+                'total' => 0,
+                'discount' => 0,
+                'shipping' => 0,
+                'tax' => 0,
+                'shipping_tax' => 0,
+                'quantity' => 0,
+                'cogs_price' => 0,
+                'packing_cost' => 0,
+                'work_time_minutes' => 0,
+                'development_cost' => 0,
+                'development_months' => 0,
+            ];
+        }
+
+        // Aggregate order-level data
+        $report[$date]['total'] += $order_data['total'];
+        $report[$date]['discount'] += $order_data['discount'];
+        $report[$date]['shipping'] += $order_data['shipping'];
+        $report[$date]['tax'] += $order_data['tax'];
+        $report[$date]['shipping_tax'] += $order_data['shipping_tax'];
+
+        // Process line items
+        foreach ($order->get_items() as $item) {
+            $product_id = $item->get_product_id();
+            $variation_id = $item->get_variation_id();
+
+            // Fetch product data
+            $product = wc_get_product($variation_id ?: $product_id);
+            if (!$product) {
+                continue;
+            }
+
+            $quantity = $item->get_quantity();
+            $cogs_price = floatval($product->get_meta('_cogs_price')) ?: 0;
+            $packing_cost = floatval($product->get_meta('_packing_cost')) ?: 0;
+            $work_time_minutes = floatval($product->get_meta('_work_time_minutes')) ?: 0;
+
+            // Aggregate product-level data
+            $report[$date]['quantity'] += $quantity;
+            $report[$date]['cogs_price'] += $quantity * $cogs_price;
+            $report[$date]['packing_cost'] += $quantity * $packing_cost;
+            $report[$date]['work_time_minutes'] += (($quantity * $work_time_minutes) / 60) * 40;
+        }
+    }
+
+    return rest_ensure_response($report);
+}
+
+/**
+ * Create the custom table on plugin activation.
+ */
+function shop_manager_create_custom_table()
+{
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'shop_manager_orders';
+    $charset_collate = $wpdb->get_charset_collate();
+
+    $sql = "CREATE TABLE {$table_name} (
+        id BIGINT(20) UNSIGNED NOT NULL,
+        order_data LONGTEXT NOT NULL,
+        date_created DATETIME NOT NULL,
+        PRIMARY KEY  (id)
+    ) {$charset_collate};";
+
+    require_once ABSPATH . 'wp-admin/includes/upgrade.php';
+    dbDelta($sql);
+
+    // Initialize the last backfilled order ID to 0.
+    if (false === get_option('shop_manager_last_backfilled_order')) {
+        update_option('shop_manager_last_backfilled_order', 0);
+    }
+}
+register_activation_hook(__FILE__, 'shop_manager_create_custom_table');
+
+/**
+ * Schedule the backfill event if not already scheduled.
+ */
+function shop_manager_schedule_backfill_event()
+{
+    if (!wp_next_scheduled('shop_manager_store_orders_db')) {
+        wp_schedule_event(time(), 'daily', 'shop_manager_store_orders_db');
+    }
+}
+add_action('wp', 'shop_manager_schedule_backfill_event');
+
+/**
+ * The scheduled backfill function.
+ *
+ * This function fetches orders in batches from the newest to the oldest,
+ * and inserts them into the custom table.
+ */
+function shop_manager_store_orders_db($newestOnly = false)
+{
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'shop_manager_orders';
+
+    if ($newestOnly) {
+        // Query for orders from today.
+        $today_start = date('Y-m-d 00:00:00');
+        $args = [
+            'limit' => -1, // Fetch all orders from today.
+            'orderby' => 'date_created',
+            'order' => 'DESC',
+            'status' => ['wc-completed', 'wc-processing'],
+            'type' => 'shop_order',
+            'date_created' => '>' . $today_start,
+        ];
+    } else {
+        // Define batch size (number of orders per query).
+        $batch_size = 50;
+
+        // Get the last backfilled order ID (assuming orders are sequential).
+        $last_backfilled = intval(get_option('shop_manager_last_backfilled_order', 0));
+
+        // Set up query arguments for backfilling.
+        $args = [
+            'limit' => $batch_size,
+            'orderby' => 'date_created',
+            'order' => 'DESC', // Start from newest orders.
+            'status' => ['wc-completed', 'wc-processing'],
+            'type' => 'shop_order',
+        ];
+
+        // If we have a last backfilled order, restrict query to those newer than that order.
+        if ($last_backfilled) {
+            // Note: Adjust the query logic if your order IDs are not sequential.
+            $args['include'] = range($last_backfilled + 1, $last_backfilled + $batch_size);
+        }
+    }
+
+    $query = new WC_Order_Query($args);
+    $orders = $query->get_orders();
+
+    if (empty($orders)) {
+        error_log('No orders found for processing.');
+        return;
+    }
+
+    $max_id = 0;
+
+    foreach ($orders as $order) {
+        $order_id = $order->get_id();
+        $order_data = shop_manager_format_order_data($order);
+        $formatted_date = $order->get_date_created()
+            ? $order->get_date_created()->date('Y-m-d H:i:s')
+            : current_time('mysql');
+
+        // Insert or update the custom table record.
+        $wpdb->replace(
+            $table_name,
+            [
+                'id' => $order_id,
+                'order_data' => wp_json_encode($order_data),
+                'date_created' => $formatted_date,
+            ],
+            ['%d', '%s', '%s'],
+        );
+
+        if ($order_id > $max_id) {
+            $max_id = $order_id;
+        }
+    }
+
+    // Only update the tracking option if we're in backfill mode.
+    if (!$newestOnly && $max_id) {
+        update_option('shop_manager_last_backfilled_order', $max_id);
+    }
+
+    error_log('Processed ' . count($orders) . ' orders. Latest order ID: ' . $max_id);
+}
+
+add_action('shop_manager_store_orders_db', 'shop_manager_store_orders_db');
+
+/**
+ * Example of a REST endpoint that retrieves combined data from the custom table.
+ */
+function shop_manager_get_custom_order_data(WP_REST_Request $request)
+{
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'shop_manager_orders';
+    $order_id = intval($request->get_param('id'));
+
+    // Retrieve the order from our custom table.
+    $row = $wpdb->get_row($wpdb->prepare("SELECT order_data FROM {$table_name} WHERE id = %d", $order_id), ARRAY_A);
+    if (!$row) {
+        return new WP_Error('order_not_found', 'Order not found.', ['status' => 404]);
+    }
+    $order_data = json_decode($row['order_data'], true);
+    return rest_ensure_response($order_data);
+}
+add_action('rest_api_init', function () {
+    register_rest_route('custom/v1', '/custom-order/(?P<id>\d+)', [
+        'methods' => 'GET',
+        'callback' => 'shop_manager_get_custom_order_data',
+        'permission_callback' => '__return_true',
+    ]);
+});
+
+/**
+ * REST endpoint to reset and process orders backfill.
+ *
+ * POST requests: Reset the backfill (clear table/tracking if requested).
+ * GET requests: Process one batch (paginated) and return the number of orders processed.
+ */
+function shop_manager_reset_orders_backfill(WP_REST_Request $request)
+{
+    global $wpdb;
+    $table_name = $wpdb->prefix . 'shop_manager_orders';
+
+    // Branch by request method.
+    if (strtoupper($request->get_method()) === 'POST') {
+        // Reset Phase: Check if the custom table exists.
+        $table_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table_name));
+
+        // Optionally, clear (truncate) the table if requested.
+        $clear_table = $request->get_param('clear_table') === 'true';
+        if ($table_exists && $clear_table) {
+            $result = $wpdb->query("TRUNCATE TABLE {$table_name}");
+            if (false === $result) {
+                error_log('Failed to truncate table: ' . $wpdb->last_error);
+                return new WP_Error('db_error', 'Failed to truncate the orders table.', ['status' => 500]);
+            }
+        } elseif (!$table_exists) {
+            // Create the table if it doesn't exist.
+            shop_manager_create_custom_table();
+        }
+
+        // Optionally, reset the backfill tracking option if requested.
+        $clear_tracking = $request->get_param('clear_tracking') === 'true';
+        if ($clear_tracking) {
+            update_option('shop_manager_last_backfilled_order', 0);
+        }
+
+        return rest_ensure_response([
+            'message' => 'Backfill reset completed. Now use GET to process batches.',
+        ]);
+    }
+
+    // GET method: Process one batch of orders.
+    if (strtoupper($request->get_method()) === 'GET') {
+        $batchSize = 200; // Backend-defined batch size.
+        $currentPage = absint($request->get_param('page')) ?: 1;
+
+        $args = [
+            'limit' => $batchSize,
+            'page' => $currentPage,
+            'status' => ['wc-completed', 'wc-processing'],
+            'type' => 'shop_order',
+        ];
+
+        $query = new WC_Order_Query($args);
+        $orders = $query->get_orders();
+        $orders_count = count($orders);
+
+        // Process each order in the batch.
+        foreach ($orders as $order) {
+            $order_id = $order->get_id();
+            $order_data = shop_manager_format_order_data($order);
+            $formatted_date = $order->get_date_created()
+                ? $order->get_date_created()->date('Y-m-d H:i:s')
+                : current_time('mysql');
+
+            $wpdb->replace(
+                $table_name,
+                [
+                    'id' => $order_id,
+                    'order_data' => wp_json_encode($order_data),
+                    'date_created' => $formatted_date,
+                ],
+                ['%d', '%s', '%s'],
+            );
+        }
+
+        // Update the tracking option with the last processed order ID.
+        if ($orders_count > 0) {
+            $lastOrder = end($orders);
+            update_option('shop_manager_last_backfilled_order', $lastOrder->get_id());
+        }
+
+        return rest_ensure_response([
+            'orders_count' => $orders_count,
+            'message' => 'Batch processed successfully.',
+        ]);
+    }
+
+    return rest_ensure_response([
+        'message' => 'Invalid request method.',
+    ]);
+}
+
+add_action('rest_api_init', function () {
+    register_rest_route('custom/v1', '/order/recalculate-orders', [
+        'methods' => ['GET', 'POST'],
+        'callback' => 'shop_manager_reset_orders_backfill',
+        'permission_callback' => '__return_true', // Adjust permissions as needed.
+    ]);
+});

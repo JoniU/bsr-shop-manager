@@ -1,4 +1,7 @@
 <template>
+    <div class="m-2 p-2 rounded-md shadow-md bg-elevated border-1 border-gray-700 dark:bg-gray-800">
+        <TargetsDashboard />
+    </div>
     <div v-if="isLoading" class="p-4">
         <UProgress v-model="loading" />
     </div>

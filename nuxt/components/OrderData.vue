@@ -1,17 +1,34 @@
 <template>
-    <div class="space-y-4 flex items-center ">
+    <div class="space-y-4 flex items-center">
         <!-- Order ID Input and Fetch Button -->
         <div class="space-y-4 pt-8 w-full">
             <div
-                class="flex flex-col m-auto sm:flex-row justify-center items-center w-full space-y-4 sm:space-y-0 sm:space-x-4 max-w-xl">
+                class="flex flex-col m-auto sm:flex-row justify-center items-center w-full space-y-4 sm:space-y-0 sm:space-x-4 max-w-xl"
+            >
                 <!-- Button -->
-                <UButton label="Fetch Order Cache" @click="handleFetchOrder" color="primary" variant="subtle"
-                    class="w-full sm:w-auto" />
+                <UButton
+                    label="Fetch Order Cache"
+                    @click="handleFetchOrder"
+                    color="primary"
+                    variant="subtle"
+                    class="w-full sm:w-auto"
+                />
                 <!-- Input -->
-                <UInput id="order-id" v-model="orderId" type="text" placeholder="Enter Order ID" label="Order ID"
-                    class="w-full flex-1" />
-                <UButton label="Regenerate Cache" @click="handleRegenerateFile" color="secondary" variant="outline"
-                    class="w-full sm:w-auto" />
+                <UInput
+                    id="order-id"
+                    v-model="orderId"
+                    type="text"
+                    placeholder="Enter Order ID"
+                    label="Order ID"
+                    class="w-full flex-1"
+                />
+                <UButton
+                    label="Regenerate Cache"
+                    @click="handleRegenerateFile"
+                    color="secondary"
+                    variant="outline"
+                    class="w-full sm:w-auto"
+                />
             </div>
             <!-- Display Order Data -->
             <div v-if="isLoading" class="p-4">
@@ -25,9 +42,8 @@
     </div>
 </template>
 
-
 <script setup>
-import { ref } from "vue";
+import { ref } from 'vue';
 
 const orderId = ref(''); // Tracks the entered order ID
 const errorMessage = ref(''); // Tracks error messages
@@ -77,53 +93,50 @@ async function handleFetchOrder() {
     }
 }
 
-// Function to regenerate the file using the paginated API
 async function handleRegenerateFile() {
     isLoading.value = true;
     errorMessage.value = '';
     successMessage.value = '';
     let currentPage = 1;
-    const perPage = 200; // Adjust as needed
     let hasMoreData = true;
-    const pageLimit = 150; // Limit to prevent infinite loops
+    const pageLimit = 150; // Prevent infinite loops
+    const batchSize = 200; // Must match the backend's batchSize
 
     try {
-        while (hasMoreData) {
-            // Determine if this is the last page
-            const isLastPage = currentPage >= pageLimit;
+        // First, reset the backfill tracking and clear the table.
+        await $fetch(`${apiUrl}/recalculate-orders?clear_tracking=true&clear_table=true`, {
+            method: 'POST',
+            credentials: 'include', // Ensures cookies for authentication
+        });
+        console.log('Backfill reset completed.');
 
-            // Call the paginated API endpoint
-            const response = await $fetch(
-                `${apiUrl}-flush?page=${currentPage}&per_page=${perPage}&last=${isLastPage}`,
-                {
-                    method: 'GET',
-                    credentials: 'include', // Ensures cookies for authentication
-                }
-            );
+        // Now, repeatedly call the GET endpoint to process batches.
+        while (hasMoreData && currentPage < pageLimit) {
+            // Call the GET endpoint with the current page number.
+            const response = await $fetch(`${apiUrl}/recalculate-orders?page=${currentPage}`, {
+                method: 'GET',
+                credentials: 'include',
+            });
 
-            console.log(
-                `Processed page ${currentPage}, orders: ${response.orders_count}`
-            );
+            console.log(`Processed page ${currentPage}, orders processed: ${response.orders_count}`);
 
-            // Check if there are more orders to process
-            if (response.orders_count < perPage || isLastPage) {
-                hasMoreData = false; // Exit loop if no more data or we're on the last page
-                console.log(`No more data to fetch`);
+            // If fewer orders than batchSize were processed, we're done.
+            if (response.orders_count < batchSize) {
+                hasMoreData = false;
+                console.log('No more data to fetch.');
             } else {
-                currentPage++; // Move to the next page
+                currentPage++;
             }
         }
-        successMessage.value = 'File regenerated successfully!';
+        successMessage.value = 'Database backfill completed successfully!';
     } catch (error) {
-        console.error('Error regenerating file:', error);
-        errorMessage.value =
-            'Failed to regenerate the file. Please check the API.';
+        console.error('Error updating database:', error);
+        errorMessage.value = 'Failed to update the database. Please check the API.';
     } finally {
         isLoading.value = false;
         currentPage = 1;
     }
 }
-
 </script>
 
 <style scoped></style>

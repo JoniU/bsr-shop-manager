@@ -36,7 +36,7 @@ watch(
 // Render the chart
 function renderChart(granularity: string, newReport: ReportData) {
     const aggregatedData = aggregateData(newReport, granularity.toLowerCase());
-
+    console.log(aggregatedData);
     const datasets = [
         {
             label: "Profit",
@@ -49,6 +49,9 @@ function renderChart(granularity: string, newReport: ReportData) {
                         entry.cogs_price +
                         entry.packing_cost +
                         entry.work_time_minutes +
+                        entry.costs +
+                        entry.rent +
+                        entry.marketing_cost +
                         entry.development_cost)
             ),
             backgroundColor: "rgba(5, 224, 114, 0.4)", // Green 500
@@ -73,8 +76,29 @@ function renderChart(granularity: string, newReport: ReportData) {
         {
             label: "Packing Cost",
             data: aggregatedData.map((entry) => entry.packing_cost),
-            backgroundColor: "rgba(68, 0, 183, 0.4)", // Orange 500
-            borderColor: "rgba(68, 0, 183, 1)", // Gray 500
+            backgroundColor: "rgba(255, 100, 103, 0.4)", // Orange 500
+            borderColor: "rgba(255, 100, 10, 1)", // Gray 500
+            borderWidth: 3,
+        },
+        {
+            label: "Fixed costs",
+            data: aggregatedData.map((entry) => entry.costs),
+            backgroundColor: "rgba(208, 135, 0, 0.4)", // Orange 500
+            borderColor: "rgba(208, 135, 0, 1)", // Gray 500
+            borderWidth: 3,
+        },
+        {
+            label: "Marketing",
+            data: aggregatedData.map((entry) => entry.marketing_cost),
+            backgroundColor: "rgba(255, 210, 48,, 0.4)", // Orange 500
+            borderColor: "rgba(255, 210, 48, 1)", // Gray 500
+            borderWidth: 3,
+        },
+        {
+            label: "Rent",
+            data: aggregatedData.map((entry) => entry.rent),
+            backgroundColor: "rgba(253, 199, 0, 0.4)", // Orange 500
+            borderColor: "rgba(253, 199, 0, 1)", // Gray 500
             borderWidth: 3,
         },
         {
@@ -129,6 +153,7 @@ function renderChart(granularity: string, newReport: ReportData) {
                     labels: {
                         usePointStyle: true, // Use a point style for labels
                         pointStyle: "circle",
+                        pointStyleWidth: 18,
                     },
                 },
             },
@@ -168,6 +193,9 @@ function aggregateData(reportData: ReportData, granularity: string) {
                 quantity: 0,
                 cogs_price: 0,
                 packing_cost: 0,
+                costs: 0,
+                marketing_cost: 0,
+                rent: 0,
                 work_time_minutes: 0,
                 development_cost: 0,
                 development_months: 0,
