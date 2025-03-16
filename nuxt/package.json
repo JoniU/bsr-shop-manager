@@ -12,26 +12,30 @@
   },
   "dependencies": {
     "@internationalized/date": "^3.7.0",
-    "@nuxt/ui": "^3.0.0-alpha.11",
+    "@nuxt/ui": "^3.0.0",
     "@pinia/nuxt": "^0.9.0",
-    "chart.js": "^4.4.7",
+    "axios": "^1.8.3",
+    "chart.js": "^4.4.8",
     "chartjs-adapter-date-fns": "^3.0.0",
     "dayjs": "^1.11.13",
-    "eslint": "^9.18.0",
+    "eslint": "^9.22.0",
     "glob": "^11.0.1",
     "highlight.js": "^11.11.1",
     "inflight": "^1.0.6",
     "pinia": "^2.3.1",
     "portal-vue": "^3.0.0",
+    "tailwindcss": "^4.0.14",
     "vue": "latest",
     "vue-router": "latest"
   },
   "devDependencies": {
-    "autoprefixer": "^10.4.20",
+    "autoprefixer": "^10.4.21",
     "nitro": "^0.0.0",
-    "nuxt": "^3.15.2",
+    "nuxt": "^3.16.0",
     "postcss-nesting": "^13.0.1",
     "postcss-prefix-selector": "^2.1.0",
-    "postcss-selector-replace": "^1.0.2"
+    "postcss-selector-replace": "^1.0.2",
+    "stylelint": "^16.16.0",
+    "stylelint-config-tailwindcss": "^1.0.0"
   }
 }
