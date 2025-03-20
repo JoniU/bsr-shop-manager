@@ -227,9 +227,6 @@ function shop_manager_last_days_orders(WP_REST_Request $request)
         ->modify("-$days days")
         ->format('Y-m-d H:i:s');
 
-    // Log the start date for debugging
-    error_log("Start date: $start_date");
-
     // Query WooCommerce orders from the last N days
     $args = [
         'date_created' => '>' . $start_date, // Ensure the format is correct
@@ -240,9 +237,6 @@ function shop_manager_last_days_orders(WP_REST_Request $request)
 
     $query = new WC_Order_Query($args);
     $orders = $query->get_orders();
-
-    // Log the number of orders for debugging
-    error_log('Number of orders: ' . count($orders));
 
     if (empty($orders)) {
         return rest_ensure_response(['message' => 'No orders found for the specified period.']);
@@ -355,14 +349,14 @@ function shop_manager_store_orders_db($newestOnly = false)
 
     if ($newestOnly) {
         // Query for orders from today.
-        $today_start = date('Y-m-d 00:00:00');
+        $start_date = date('Y-m-d 00:00:00', strtotime('-3 days'));
         $args = [
             'limit' => -1, // Fetch all orders from today.
             'orderby' => 'date_created',
             'order' => 'DESC',
             'status' => ['wc-completed', 'wc-processing'],
             'type' => 'shop_order',
-            'date_created' => '>' . $today_start,
+            'date_created' => '>' . $start_date,
         ];
     } else {
         // Define batch size (number of orders per query).
