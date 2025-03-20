@@ -147,7 +147,7 @@ onMounted(fetchProfitData);
 
 <template>
     <div class="p-2">
-        <h2 class="text-md mb-2">Total Gross Margin Targets</h2>
+        <h2 class="text-md mb-2">Total Gross Margin (GM2) Targets</h2>
         <div v-if="isLoading">Loading...</div>
         <div v-else-if="error" class="text-red-500">{{ error }}</div>
         <div v-else>
