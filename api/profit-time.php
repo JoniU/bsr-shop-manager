@@ -41,7 +41,6 @@ function generate_and_cache_report($force_regenerate = false)
 
     global $wpdb;
     $table_name = $wpdb->prefix . 'shop_manager_profit_timeline';
-    $cache_lifetime = 24 * 60 * 60; // Cache lifetime: 24 hours
 
     // Ensure the custom table exists.
     $table_exists = $wpdb->get_var($wpdb->prepare('SHOW TABLES LIKE %s', $table_name));
@@ -62,24 +61,24 @@ function generate_and_cache_report($force_regenerate = false)
         $row = $wpdb->get_row("SELECT report_data, updated_at FROM {$table_name} WHERE id = 1");
         if ($row) {
             $updated_at = strtotime($row->updated_at);
-            if (time() - $updated_at < $cache_lifetime) {
-                $decoded_data = json_decode($row->report_data, true);
-                if (json_last_error() === JSON_ERROR_NONE) {
-                    // Refresh today's data regardless of cache.
-                    $today = date('Y-m-d');
-                    $todays_report = generate_order_product_report_for_date($today);
-                    if (!empty($todays_report[$today])) {
-                        $decoded_data[$today] = $todays_report[$today];
-                        // Update the cache with today's refreshed data.
-                        $data = [
-                            'id' => 1,
-                            'report_data' => wp_json_encode($decoded_data, JSON_PRETTY_PRINT),
-                            'updated_at' => current_time('mysql', 1),
-                        ];
-                        $wpdb->replace($table_name, $data, ['%d', '%s', '%s']);
-                    }
-                    return $decoded_data;
+            $decoded_data = json_decode($row->report_data, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                // Refresh today's data regardless of cache.
+                $today = date('Y-m-d');
+                $yesterday = date('Y-m-d', strtotime('-1 day'));
+                $todays_report = generate_order_product_report_for_date($yesterday);
+                $todays_report = generate_order_product_report_for_date($today);
+                if (!empty($todays_report[$today])) {
+                    $decoded_data[$today] = $todays_report[$today];
+                    // Update the cache with today's refreshed data.
+                    $data = [
+                        'id' => 1,
+                        'report_data' => wp_json_encode($decoded_data, JSON_PRETTY_PRINT),
+                        'updated_at' => current_time('mysql', 1),
+                    ];
+                    $wpdb->replace($table_name, $data, ['%d', '%s', '%s']);
                 }
+                return $decoded_data;
             }
         }
     }
@@ -101,10 +100,26 @@ function generate_and_cache_report($force_regenerate = false)
 
     return $report;
 }
+/**
+ * Schedule regeneration of the profit timeline report once daily.
+ */
+function schedule_daily_report_regeneration()
+{
+    generate_and_cache_report(true);
+}
+function setup_daily_report_schedule()
+{
+    if (!wp_next_scheduled('daily_report_regeneration')) {
+        wp_schedule_event(time(), 'daily', 'daily_report_regeneration');
+    }
+}
+add_action('init', 'setup_daily_report_schedule');
+add_action('daily_report_regeneration', 'schedule_daily_report_regeneration');
 
 /**
  * Generate the profit timeline report by aggregating order data from all orders.
  */
+
 function generate_order_product_report()
 {
     // Always refresh orders from the custom orders table.
@@ -130,16 +145,34 @@ function generate_order_product_report()
     }
 
     // Load additional settings.
-    $option_key = 'bsr_shop_manager_settings_data';
-    $settings = get_option($option_key, [
-        'costs' => [],
-        'marketingCosts' => [],
-        'rent' => [],
-    ]);
+    $settings = get_bsr_shop_manager_settings_data();
     $costs = $settings['costs'];
     $marketingCosts = $settings['marketingCosts'];
     $rent = $settings['rent'];
 
+    // Initialize the report.
+    $report = initialize_report($orders, $costs, $marketingCosts, $rent);
+
+    // Process each order to aggregate values.
+    foreach ($orders as $order) {
+        process_order($order, $report);
+    }
+
+    return $report;
+}
+
+function get_bsr_shop_manager_settings_data()
+{
+    $option_key = 'bsr_shop_manager_settings_data';
+    return get_option($option_key, [
+        'costs' => [],
+        'marketingCosts' => [],
+        'rent' => [],
+    ]);
+}
+
+function initialize_report($orders, $costs, $marketingCosts, $rent)
+{
     $report = [];
 
     // Determine the overall date range.
@@ -173,49 +206,55 @@ function generate_order_product_report()
         }
 
         // Calculate daily costs.
-        $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
-        $dailyCost = (isset($costs[$year][$month - 1]) ? $costs[$year][$month - 1] : 0) / $daysInMonth;
-        $dailyMarketingCost =
-            (isset($marketingCosts[$year][$month - 1]) ? $marketingCosts[$year][$month - 1] : 0) / $daysInMonth;
-        $dailyRent = (isset($rent[$year][$month - 1]) ? $rent[$year][$month - 1] : 0) / $daysInMonth;
-
-        $report[$formattedDate]['costs'] += $dailyCost;
-        $report[$formattedDate]['marketing_costs'] += $dailyMarketingCost;
-        $report[$formattedDate]['rent'] += $dailyRent;
-    }
-
-    // Process each order to aggregate values.
-    foreach ($orders as $order) {
-        $date = $order['date'];
-        $report[$date]['total'] += $order['total'];
-        $report[$date]['discount'] += $order['discount'];
-        $report[$date]['shipping'] += $order['shipping'];
-        $report[$date]['tax'] += $order['tax'];
-        $report[$date]['shipping_tax'] += $order['shipping_tax'];
-
-        foreach ($order['line_items'] as $item) {
-            $product_id = $item['product_id'];
-            $variation_id = $item['variation_id'];
-
-            // Fetch product data.
-            $product = wc_get_product($variation_id ?: $product_id);
-            if (!$product) {
-                continue;
-            }
-
-            $quantity = $item['quantity'];
-            $cogs_price = floatval($product->get_meta('_cogs_price')) ?: 0;
-            $packing_cost = floatval($product->get_meta('_packing_cost')) ?: 0;
-            $work_time_minutes = floatval($product->get_meta('_work_time_minutes')) ?: 0;
-
-            $report[$date]['quantity'] += $quantity;
-            $report[$date]['cogs_price'] += $quantity * $cogs_price;
-            $report[$date]['packing_cost'] += $quantity * $packing_cost;
-            $report[$date]['work_time_minutes'] += (($quantity * $work_time_minutes) / 60) * 40;
-        }
+        $dailyCosts = calculate_daily_costs($year, $month, $costs, $marketingCosts, $rent);
+        $report[$formattedDate]['costs'] += $dailyCosts['costs'];
+        $report[$formattedDate]['marketing_costs'] += $dailyCosts['marketing_costs'];
+        $report[$formattedDate]['rent'] += $dailyCosts['rent'];
     }
 
     return $report;
+}
+
+function calculate_daily_costs($year, $month, $costs, $marketingCosts, $rent)
+{
+    $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
+    return [
+        'costs' => (isset($costs[$year][$month - 1]) ? $costs[$year][$month - 1] : 0) / $daysInMonth,
+        'marketing_costs' =>
+            (isset($marketingCosts[$year][$month - 1]) ? $marketingCosts[$year][$month - 1] : 0) / $daysInMonth,
+        'rent' => (isset($rent[$year][$month - 1]) ? $rent[$year][$month - 1] : 0) / $daysInMonth,
+    ];
+}
+
+function process_order($order, &$report)
+{
+    $date = $order['date'];
+    $report[$date]['total'] += $order['total'];
+    $report[$date]['discount'] += $order['discount'];
+    $report[$date]['shipping'] += $order['shipping'];
+    $report[$date]['tax'] += $order['tax'];
+    $report[$date]['shipping_tax'] += $order['shipping_tax'];
+
+    foreach ($order['line_items'] as $item) {
+        $product_id = $item['product_id'];
+        $variation_id = $item['variation_id'];
+
+        // Fetch product data.
+        $product = wc_get_product($variation_id ?: $product_id);
+        if (!$product) {
+            continue;
+        }
+
+        $quantity = $item['quantity'];
+        $cogs_price = floatval($product->get_meta('_cogs_price')) ?: 0;
+        $packing_cost = floatval($product->get_meta('_packing_cost')) ?: 0;
+        $work_time_minutes = floatval($product->get_meta('_work_time_minutes')) ?: 0;
+
+        $report[$date]['quantity'] += $quantity;
+        $report[$date]['cogs_price'] += $quantity * $cogs_price;
+        $report[$date]['packing_cost'] += $quantity * $packing_cost;
+        $report[$date]['work_time_minutes'] += (($quantity * $work_time_minutes) / 60) * 40;
+    }
 }
 
 /**
@@ -235,6 +274,7 @@ function generate_order_product_report_for_date($target_date)
         return [];
     }
 
+    // Decode each order's JSON data.
     $orders = [];
     foreach ($results as $row) {
         $order = json_decode($row->order_data, true);
@@ -247,18 +287,13 @@ function generate_order_product_report_for_date($target_date)
     }
 
     // Load additional settings.
-    $option_key = 'bsr_shop_manager_settings_data';
-    $settings = get_option($option_key, [
-        'costs' => [],
-        'marketingCosts' => [],
-        'rent' => [],
-    ]);
+    $settings = get_bsr_shop_manager_settings_data();
     $costs = $settings['costs'];
     $marketingCosts = $settings['marketingCosts'];
     $rent = $settings['rent'];
 
-    $report = [];
     // Initialize report for $target_date.
+    $report = [];
     $report[$target_date] = [
         'total' => 0,
         'discount' => 0,
@@ -280,42 +315,16 @@ function generate_order_product_report_for_date($target_date)
     $dt = new DateTime($target_date);
     $year = intval($dt->format('Y'));
     $month = intval($dt->format('m'));
-    $daysInMonth = cal_days_in_month(CAL_GREGORIAN, $month, $year);
-    $dailyCost = (isset($costs[$year][$month - 1]) ? $costs[$year][$month - 1] : 0) / $daysInMonth;
-    $dailyMarketingCost =
-        (isset($marketingCosts[$year][$month - 1]) ? $marketingCosts[$year][$month - 1] : 0) / $daysInMonth;
-    $dailyRent = (isset($rent[$year][$month - 1]) ? $rent[$year][$month - 1] : 0) / $daysInMonth;
-
-    $report[$target_date]['costs'] = $dailyCost;
-    $report[$target_date]['marketing_costs'] = $dailyMarketingCost;
-    $report[$target_date]['rent'] = $dailyRent;
+    $dailyCosts = calculate_daily_costs($year, $month, $costs, $marketingCosts, $rent);
+    $report[$target_date]['costs'] = $dailyCosts['costs'];
+    $report[$target_date]['marketing_costs'] = $dailyCosts['marketing_costs'];
+    $report[$target_date]['rent'] = $dailyCosts['rent'];
 
     // Process each order for $target_date.
     foreach ($orders as $order) {
-        $report[$target_date]['total'] += $order['total'];
-        $report[$target_date]['discount'] += $order['discount'];
-        $report[$target_date]['shipping'] += $order['shipping'];
-        $report[$target_date]['tax'] += $order['tax'];
-        $report[$target_date]['shipping_tax'] += $order['shipping_tax'];
-
-        foreach ($order['line_items'] as $item) {
-            $product_id = $item['product_id'];
-            $variation_id = $item['variation_id'];
-            $product = wc_get_product($variation_id ?: $product_id);
-            if (!$product) {
-                continue;
-            }
-            $quantity = $item['quantity'];
-            $cogs_price = floatval($product->get_meta('_cogs_price')) ?: 0;
-            $packing_cost = floatval($product->get_meta('_packing_cost')) ?: 0;
-            $work_time_minutes = floatval($product->get_meta('_work_time_minutes')) ?: 0;
-
-            $report[$target_date]['quantity'] += $quantity;
-            $report[$target_date]['cogs_price'] += $quantity * $cogs_price;
-            $report[$target_date]['packing_cost'] += $quantity * $packing_cost;
-            $report[$target_date]['work_time_minutes'] += (($quantity * $work_time_minutes) / 60) * 40;
-        }
+        process_order($order, $report);
     }
+
     return $report;
 }
 
