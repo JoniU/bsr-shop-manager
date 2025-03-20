@@ -58,7 +58,7 @@ function get_products_directly()
             }
         }
 
-        // Extract meta fields for the main product
+        // Extract meta fields for the main product including our custom field
         $meta_data = get_post_meta($product->get_id());
         $products[] = [
             'id' => $product->get_id(),
@@ -76,6 +76,7 @@ function get_products_directly()
                 '_work_time_minutes' => $meta_data['_work_time_minutes'][0] ?? '',
                 '_development_cost' => $meta_data['_development_cost'][0] ?? '',
                 '_development_months' => $meta_data['_development_months'][0] ?? '',
+                '_exclude_from_stock' => $meta_data['_exclude_from_stock'][0] ?? 'no',
             ],
             'manage_stock' => isset($meta_data['_manage_stock'][0]) && $meta_data['_manage_stock'][0] === 'yes',
             'variations' => $variations,
@@ -86,14 +87,14 @@ function get_products_directly()
 }
 
 add_action('rest_api_init', function () {
-    // Register endpoint for products
+    // Register endpoint for updating parent products
     register_rest_route('custom/v1', '/products/(?P<id>\d+)', [
         'methods' => 'PUT',
         'callback' => 'custom_update_product',
         'permission_callback' => '__return_true',
     ]);
 
-    // Register endpoint for variations
+    // Register endpoint for updating variations
     register_rest_route('custom/v1', '/products/(?P<parent_id>\d+)/variations/(?P<id>\d+)', [
         'methods' => 'PUT',
         'callback' => 'custom_update_variation',
@@ -138,15 +139,19 @@ function custom_handle_product_update($request, $is_variation)
 
     // Ensure it's not a variation if updating a parent product
     if (!$is_variation && $product->is_type('variation')) {
-        return new WP_Error('invalid_request', 'Specified ID is a variation, not a parent product.', [
-            'status' => 400,
-        ]);
+        return new WP_Error('invalid_request', 'Specified ID is a variation, not a parent product.', ['status' => 400]);
     }
 
     // Apply updates
     foreach ($updates as $key => $value) {
-        if (is_callable([$product, "set_$key"])) {
+        if ($key === 'exclude_from_stock') {
+            // Update the custom meta field (expecting a value like 'yes' or 'no')
+            update_post_meta($product_id, '_exclude_from_stock', $value);
+        } elseif (is_callable([$product, "set_$key"])) {
             $product->{"set_$key"}($value);
+        } else {
+            // Optionally handle other meta fields
+            update_post_meta($product_id, '_' . $key, $value);
         }
     }
 

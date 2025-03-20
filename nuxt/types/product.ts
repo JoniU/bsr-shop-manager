@@ -23,6 +23,7 @@ export interface MetaData {
     _work_time_minutes: number;
     _development_cost: number;
     _development_months: number;
+    _exclude_from_stock: string;
 }
 
 export interface ProductSave {

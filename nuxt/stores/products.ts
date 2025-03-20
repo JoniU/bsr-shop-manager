@@ -10,7 +10,6 @@ export const useProductStore = defineStore('products', {
         error: null as string | null, // Error state
     }),
     actions: {
-
         // Fetch products directly from the API (no cache)
         async fetchProducts() {
             const toast = useToast();
@@ -44,6 +43,7 @@ export const useProductStore = defineStore('products', {
                         _work_time_minutes: product.meta_data?._work_time_minutes || 0,
                         _development_cost: product.meta_data?._development_cost || 0,
                         _development_months: product.meta_data?._development_months || 0,
+                        _exclude_from_stock: product.meta_data?._exclude_from_stock || 'no',
                     },
                 }));
 
@@ -78,10 +78,13 @@ export const useProductStore = defineStore('products', {
 
         // Set products (convert array to an object keyed by ID)
         setProducts(products: Product[]) {
-            this.products = products.reduce((acc, product) => {
-                acc[product.id] = product;
-                return acc;
-            }, {} as Record<number, Product>);
+            this.products = products.reduce(
+                (acc, product) => {
+                    acc[product.id] = product;
+                    return acc;
+                },
+                {} as Record<number, Product>,
+            );
         },
 
         // Update a single product by ID
@@ -98,21 +101,17 @@ export const useProductStore = defineStore('products', {
                     : `/wp-json/custom/v1/products/${productId}`;
 
                 const apiUrl = `${config.public.baseUrl}${apiEndpoint}`;
-                console.log(apiUrl)
-                const response = await axios.put(
-                    apiUrl,
-                    payload,
-                    {
-                        withCredentials: true,
-                    }
-                );
+                console.log(apiUrl);
+                const response = await axios.put(apiUrl, payload, {
+                    withCredentials: true,
+                });
                 console.log(response);
                 // Update the local store after the API update
                 if (parentId) {
                     const parentProduct = this.products[parentId];
                     if (parentProduct && parentProduct.variations) {
                         const variationIndex = parentProduct.variations.findIndex(
-                            (variation) => variation.id === productId
+                            (variation) => variation.id === productId,
                         );
                         if (variationIndex !== -1) {
                             parentProduct.variations[variationIndex] = {
@@ -131,34 +130,35 @@ export const useProductStore = defineStore('products', {
                 return response.data;
             } catch (error: unknown) {
                 console.error('Error updating product:', error);
-                const errorMessage =
-                    error instanceof Error ? error.message : 'Failed to update product.';
+                const errorMessage = error instanceof Error ? error.message : 'Failed to update product.';
                 throw new Error(errorMessage);
             }
         },
     },
     getters: {
         // Get a product by ID, supporting both parent and variation lookup
-        getProductById: (state) => (id: number, parentId?: number): Product | undefined => {
-            // If only the product ID is provided, directly look for it in the first level
-            if (!parentId) {
-                return state.products[id];
-            }
+        getProductById:
+            (state) =>
+            (id: number, parentId?: number): Product | undefined => {
+                // If only the product ID is provided, directly look for it in the first level
+                if (!parentId) {
+                    return state.products[id];
+                }
 
-            // If both parentId and id are provided, look for the variation inside the parent's variations
-            const parentProduct = state.products[parentId];
-            if (!parentProduct) return undefined; // Parent not found
+                // If both parentId and id are provided, look for the variation inside the parent's variations
+                const parentProduct = state.products[parentId];
+                if (!parentProduct) return undefined; // Parent not found
 
-            // If the product is the parent itself, return it
-            if (parentProduct.id === id) return parentProduct;
+                // If the product is the parent itself, return it
+                if (parentProduct.id === id) return parentProduct;
 
-            // Look for the product in the parent's variations array
-            if (parentProduct.variations && Array.isArray(parentProduct.variations)) {
-                return parentProduct.variations.find((variation) => variation.id === id);
-            }
+                // Look for the product in the parent's variations array
+                if (parentProduct.variations && Array.isArray(parentProduct.variations)) {
+                    return parentProduct.variations.find((variation) => variation.id === id);
+                }
 
-            return undefined; // Product not found
-        },
+                return undefined; // Product not found
+            },
         // Flattened products for hierarchical rendering (e.g., for tables)
         flattenedProducts(state): Product[] {
             // Flatten products with variations
