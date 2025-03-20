@@ -147,7 +147,7 @@ function register_profit_dashboard_widget()
     if (current_user_can('manage_options')) {
         wp_add_dashboard_widget(
             'profit_dashboard_widget', // Widget slug.
-            'Targets', // Title.
+            'Total Gross Margin Targets', // Title.
             'my_profit_dashboard_widget', // Display callback.
         );
     }
