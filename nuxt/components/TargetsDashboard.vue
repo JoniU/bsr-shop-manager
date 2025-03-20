@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import dayjs from 'dayjs';
+import isoWeek from 'dayjs/plugin/isoWeek';
 import duration from 'dayjs/plugin/duration';
 import isBetween from 'dayjs/plugin/isBetween';
 import axios from 'axios';
 
+dayjs.extend(isoWeek);
 dayjs.extend(duration);
 dayjs.extend(isBetween);
 
@@ -99,7 +101,8 @@ const targets = computed(() => [
     },
     {
         label: 'This Week',
-        calculated: parseFloat(calculateRangeProfit(dayjs().startOf('week'), dayjs().endOf('week')).toFixed(2)) || 0,
+        calculated:
+            parseFloat(calculateRangeProfit(dayjs().startOf('isoWeek'), dayjs().endOf('isoWeek')).toFixed(2)) || 0,
         target: targetValues.value.thisWeek || 0,
     },
     {
