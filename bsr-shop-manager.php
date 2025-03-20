@@ -114,102 +114,62 @@ add_action('plugins_loaded', function () {
                 '1.0.0', // Version
             );
         }
+        wp_enqueue_style(
+            'profit-dashboard-widget',
+            plugin_dir_url(__FILE__) . 'assets/profit-dashboard.css',
+            [],
+            '1.0.0',
+        );
+        // Enqueue your profit dashboard script.
+        wp_enqueue_script(
+            'profit-dashboard',
+            plugin_dir_url(__FILE__) . 'profit-dashboard.js',
+            [], // Dependencies array (empty if none)
+            '1.0.0', // Version
+            true, // Load in footer
+        );
     }
 });
 
-/*
-if (!defined('ABSPATH')) {
-    exit(); // Prevent direct access.
-}
-
-add_action('admin_init', function () {
-    delete_transient('shop_manager_js_file');
-    delete_transient('shop_manager_css_file');
-});
-
-// Include caching functionality
-require_once plugin_dir_path(__FILE__) . 'admin/cache-manager.php';
-
-// Function to get the hashed asset file dynamically
-function shop_manager_get_asset_file($type)
+function my_profit_dashboard_widget()
 {
-    $cache_key = "shop_manager_{$type}_file";
-    $cached_file = get_transient($cache_key);
-
-    if ($cached_file) {
-        return $cached_file;
+    // Check if the current user can manage options (administrator capability).
+    if (!current_user_can('manage_options')) {
+        return;
     }
-
-    $plugin_dir = plugin_dir_path(__FILE__);
-    $plugin_url = plugin_dir_url(__FILE__);
-    $pattern = $plugin_dir . "admin/build/static/{$type}/main.*.{$type}";
-    $files = glob($pattern);
-
-    // Debugging: Log matched files
-    if (defined('WP_DEBUG') && WP_DEBUG) {
-        error_log("Pattern: $pattern");
-        error_log('Files found: ' . print_r($files, true));
-    }
-
-    if (!empty($files)) {
-        $file_url = $plugin_url . 'admin/build/static/' . $type . '/' . basename($files[0]);
-        set_transient($cache_key, $file_url, 12 * HOUR_IN_SECONDS);
-        return $file_url;
-    }
-
-    // Fallback for development or missing file
-    return $plugin_url . 'admin/build/static/' . $type . '/main.' . $type;
+    // Output the widget content.
+    echo '<div id="profit-dashboard-block">Loading profit dashboard...</div>';
 }
 
-// Enqueue React app assets
-function shop_manager_enqueue_scripts()
+function register_profit_dashboard_widget()
 {
-    $css_file = shop_manager_get_asset_file('css');
-    $js_file = shop_manager_get_asset_file('js');
-
-    if ($css_file) {
-        wp_enqueue_style('shop-manager-styles', $css_file, [], null);
+    // Only register the widget if the current user is an admin.
+    if (current_user_can('manage_options')) {
+        wp_add_dashboard_widget(
+            'profit_dashboard_widget', // Widget slug.
+            'Targets', // Title.
+            'my_profit_dashboard_widget', // Display callback.
+        );
     }
+}
+add_action('wp_dashboard_setup', 'register_profit_dashboard_widget');
 
-    if ($js_file) {
-        wp_enqueue_script('shop-manager-script', $js_file, ['wp-element'], null, true);
+function reposition_profit_dashboard_widget()
+{
+    global $wp_meta_boxes;
+    // Check if our widget exists in the normal core area.
+    if (isset($wp_meta_boxes['dashboard']['normal']['core']['profit_dashboard_widget'])) {
+        // Grab our widget.
+        $widget = $wp_meta_boxes['dashboard']['normal']['core']['profit_dashboard_widget'];
+        // Remove it from its current position.
+        unset($wp_meta_boxes['dashboard']['normal']['core']['profit_dashboard_widget']);
+        // Prepend it so it appears first.
+        $wp_meta_boxes['dashboard']['normal']['core'] = array_merge(
+            ['profit_dashboard_widget' => $widget],
+            $wp_meta_boxes['dashboard']['normal']['core'],
+        );
     }
-
-    wp_localize_script('shop-manager-script', 'shopManagerData', [
-        'ajax_url' => admin_url('admin-ajax.php'),
-        'nonce' => wp_create_nonce('shop_manager_nonce'),
-        'edit_product_url' => admin_url('post.php?post='),
-    ]);
 }
-add_action('admin_enqueue_scripts', 'shop_manager_enqueue_scripts');
+add_action('wp_dashboard_setup', 'reposition_profit_dashboard_widget');
 
-// Add admin menu page
-function shop_manager_add_admin_page()
-{
-    add_menu_page(
-        'Shop Manager',
-        'Shop Manager',
-        'manage_options',
-        'shop-manager',
-        'shop_manager_render_admin_page',
-        'dashicons-analytics',
-        6,
-    );
-}
-add_action('admin_menu', 'shop_manager_add_admin_page');
-
-// Render admin page
-function shop_manager_render_admin_page()
-{
-    echo '<div id="shop-manager-app"></div>';
-}
-
-include_once plugin_dir_path(__FILE__) . 'admin/ajax/ajax-handlers.php';
-require_once plugin_dir_path(__FILE__) . 'admin/meta-fields.php';
-require_once plugin_dir_path(__FILE__) . 'admin/fetch-orders.php';
-require_once plugin_dir_path(__FILE__) . 'admin/fetch-products.php';
-
-if (defined('WP_CLI') && WP_CLI) {
-    require_once plugin_dir_path(__FILE__) . 'admin/generate-data-cache.php';
-}
-*/
+?>

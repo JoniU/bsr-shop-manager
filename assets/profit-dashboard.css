@@ -1,0 +1,57 @@
+/* profit-dashboard.css */
+#profit-dashboard-block {
+    font-family: sans-serif;
+}
+
+#profit-dashboard-block h2 {
+    font-size: 1.5em;
+    margin-bottom: 20px;
+}
+
+.profit-target-card {
+    margin-bottom: 10px;
+}
+
+.profit-target-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.profit-target-label {
+    font-weight: 600;
+    font-size: 1.1em;
+}
+
+.profit-target-numbers {
+    font-size: 0.9em;
+    color: #666;
+}
+
+.profit-progress {
+    position: relative;
+    background-color: #e5e7eb;
+    border-radius: 4px;
+    height: 24px;
+    overflow: hidden;
+}
+
+.profit-progress-bar {
+    background-color: #10b981;
+    height: 100%;
+    width: 0;
+    transition: width 0.3s ease-in-out;
+}
+
+.profit-progress-text {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 600;
+}
