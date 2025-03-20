@@ -17,6 +17,7 @@ type ProfitDataEntry = {
     tax: number;
     shipping: number;
     shipping_tax: number;
+    work_cost: number;
 };
 
 type ProfitDataEntryWithDate = ProfitDataEntry & { date: string };
@@ -89,7 +90,15 @@ const targetValues = computed(() => {
 
 // Calculate profit
 const calculateProfit = (entry: ProfitDataEntryWithDate) => {
-    return entry.total - entry.cogs_price - entry.packing_cost - entry.tax - entry.shipping - entry.shipping_tax;
+    return (
+        entry.total -
+        entry.cogs_price -
+        entry.packing_cost -
+        entry.tax -
+        entry.shipping -
+        entry.shipping_tax -
+        entry.work_cost
+    );
 };
 
 // Define time ranges for targets

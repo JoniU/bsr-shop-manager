@@ -292,7 +292,7 @@ function shop_manager_last_days_orders(WP_REST_Request $request)
             $report[$date]['quantity'] += $quantity;
             $report[$date]['cogs_price'] += $quantity * $cogs_price;
             $report[$date]['packing_cost'] += $quantity * $packing_cost;
-            $report[$date]['work_time_minutes'] += (($quantity * $work_time_minutes) / 60) * 40;
+            $report[$date]['work_cost'] += (($quantity * $work_time_minutes) / 60) * 40;
         }
     }
 

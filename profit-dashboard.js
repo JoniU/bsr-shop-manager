@@ -64,7 +64,15 @@ document.addEventListener('DOMContentLoaded', function () {
     // Utility function to calculate profit for an entry.
     function calculateProfit(entry) {
         console.log(entry);
-        return entry.total - entry.cogs_price - entry.packing_cost - entry.tax - entry.shipping - entry.shipping_tax;
+        return (
+            entry.total -
+            entry.cogs_price -
+            entry.packing_cost -
+            entry.tax -
+            entry.shipping -
+            entry.shipping_tax -
+            entry.work_cost
+        );
     }
 
     // Function to calculate profit over a range.
