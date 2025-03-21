@@ -10,7 +10,7 @@ dayjs.extend(isoWeek);
 dayjs.extend(duration);
 dayjs.extend(isBetween);
 
-type ProfitDataEntry = {
+interface ProfitDataEntry {
     total: number;
     cogs_price: number;
     packing_cost: number;
@@ -18,7 +18,7 @@ type ProfitDataEntry = {
     shipping: number;
     shipping_tax: number;
     work_cost: number;
-};
+}
 
 type ProfitDataEntryWithDate = ProfitDataEntry & { date: string };
 
@@ -55,9 +55,7 @@ async function fetchSettings() {
     isLoading.value = true;
     error.value = null;
     try {
-        console.log(`Fetching settings from: ${config.public.baseUrl}/wp-json/custom/v1/bsr-shop-manager-settings`);
         const response = await axios.get(`${config.public.baseUrl}/wp-json/custom/v1/bsr-shop-manager-settings`);
-        console.log('Settings fetched:', response.data);
         // Destructure fetched data and update reactive state
         const { monthlyTarget: savedMonthlyTarget } = response.data;
         // Ensure monthlyTarget is a number (if fetched as a string, convert it)
@@ -137,7 +135,6 @@ const calculateRangeProfit = (startDate: dayjs.Dayjs, endDate: dayjs.Dayjs) => {
         const entryDate = dayjs(entry.date);
         return entryDate.isBetween(startDate, endDate, 'day', '[]');
     });
-    console.log(`Filtered entries for ${startDate.format()} - ${endDate.format()}:`, filteredEntries);
     return filteredEntries.reduce((sum, entry) => sum + calculateProfit(entry), 0);
 };
 
@@ -157,7 +154,7 @@ onMounted(fetchProfitData);
                     <div v-if="target?.target" class="flex justify-between items-center mb-2">
                         <span class="text-sm font-medium">{{ target.label }}</span>
                         <span class="text-gray-600">
-                            {{ target.calculated.toFixed(2) }} / {{ target.target.toFixed(2) }}
+                            {{ target.calculated.toFixed(0) }} / {{ target.target.toFixed(0) }}€
                         </span>
                     </div>
                     <div class="w-full bg-gray-200 dark:bg-gray-600 rounded-sm h-4 overflow-hidden shadow-md">
