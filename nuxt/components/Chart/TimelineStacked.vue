@@ -3,10 +3,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from "vue";
-import { Chart } from "chart.js/auto";
-import { getISOWeek } from "@/utils/dateUtils"; // Assuming the utility is moved to a separate file
-import type { ReportData } from "@/types/timelineReport.ts"
+import { ref, watch } from 'vue';
+import { Chart } from 'chart.js/auto';
+import { getISOWeek } from '@/utils/dateUtils'; // Assuming the utility is moved to a separate file
+import type { ReportData } from '@/types/timelineReport.ts';
 
 const props = defineProps({
     report: {
@@ -30,16 +30,15 @@ watch(
     ([newGranularity, newReport]) => {
         renderChart(newGranularity, newReport); // Re-render chart on changes
     },
-    { deep: true } // Watch deeply for nested changes in report
+    { deep: true }, // Watch deeply for nested changes in report
 );
 
 // Render the chart
 function renderChart(granularity: string, newReport: ReportData) {
     const aggregatedData = aggregateData(newReport, granularity.toLowerCase());
-    console.log(aggregatedData);
     const datasets = [
         {
-            label: "Profit",
+            label: 'Profit',
             data: aggregatedData.map(
                 (entry) =>
                     entry.total -
@@ -52,76 +51,75 @@ function renderChart(granularity: string, newReport: ReportData) {
                         entry.costs +
                         entry.rent +
                         entry.marketing_cost +
-                        entry.development_cost)
+                        entry.development_cost),
             ),
-            backgroundColor: "rgba(5, 224, 114, 0.4)", // Green 500
-            borderColor: "rgba(5, 224, 114, 1)", // Gray 500
+            backgroundColor: 'rgba(5, 224, 114, 0.4)', // Green 500
+            borderColor: 'rgba(5, 224, 114, 1)', // Gray 500
             borderWidth: 3,
         },
         {
-            label: "Cost of Goods",
+            label: 'Cost of Goods',
             data: aggregatedData.map((entry) => entry.cogs_price),
-            backgroundColor: "rgba(251, 44, 54, 0.4)", // Gray 500
-            borderColor: "rgba(251, 44, 54, 0.8)", // Gray 500
+            backgroundColor: 'rgba(251, 44, 54, 0.4)', // Gray 500
+            borderColor: 'rgba(251, 44, 54, 0.8)', // Gray 500
             borderWidth: 3,
-
         },
         {
-            label: "Work Cost",
+            label: 'Work Cost',
             data: aggregatedData.map((entry) => entry.work_time_minutes),
-            backgroundColor: "rgba(230, 0, 118, 0.4)", // Orange 500
-            borderColor: "rgba(230, 0, 118, 1)", // Gray 500
+            backgroundColor: 'rgba(230, 0, 118, 0.4)', // Orange 500
+            borderColor: 'rgba(230, 0, 118, 1)', // Gray 500
             borderWidth: 3,
         },
         {
-            label: "Packing Cost",
+            label: 'Packing Cost',
             data: aggregatedData.map((entry) => entry.packing_cost),
-            backgroundColor: "rgba(255, 100, 103, 0.4)", // Orange 500
-            borderColor: "rgba(255, 100, 10, 1)", // Gray 500
+            backgroundColor: 'rgba(255, 100, 103, 0.4)', // Orange 500
+            borderColor: 'rgba(255, 100, 10, 1)', // Gray 500
             borderWidth: 3,
         },
         {
-            label: "Fixed costs",
+            label: 'Fixed costs',
             data: aggregatedData.map((entry) => entry.costs),
-            backgroundColor: "rgba(208, 135, 0, 0.4)", // Orange 500
-            borderColor: "rgba(208, 135, 0, 1)", // Gray 500
+            backgroundColor: 'rgba(208, 135, 0, 0.4)', // Orange 500
+            borderColor: 'rgba(208, 135, 0, 1)', // Gray 500
             borderWidth: 3,
         },
         {
-            label: "Marketing",
+            label: 'Marketing',
             data: aggregatedData.map((entry) => entry.marketing_cost),
-            backgroundColor: "rgba(255, 210, 48,, 0.4)", // Orange 500
-            borderColor: "rgba(255, 210, 48, 1)", // Gray 500
+            backgroundColor: 'rgba(255, 210, 48,, 0.4)', // Orange 500
+            borderColor: 'rgba(255, 210, 48, 1)', // Gray 500
             borderWidth: 3,
         },
         {
-            label: "Rent",
+            label: 'Rent',
             data: aggregatedData.map((entry) => entry.rent),
-            backgroundColor: "rgba(253, 199, 0, 0.4)", // Orange 500
-            borderColor: "rgba(253, 199, 0, 1)", // Gray 500
+            backgroundColor: 'rgba(253, 199, 0, 0.4)', // Orange 500
+            borderColor: 'rgba(253, 199, 0, 1)', // Gray 500
             borderWidth: 3,
         },
         {
-            label: "Shipping",
+            label: 'Shipping',
             data: aggregatedData.map((entry) => entry.shipping),
-            backgroundColor: "oklch(0.446 0.043 257.281)", // Blue 500
+            backgroundColor: 'oklch(0.446 0.043 257.281)', // Blue 500
         },
         {
-            label: "Shipping Tax",
+            label: 'Shipping Tax',
             data: aggregatedData.map((entry) => entry.shipping_tax),
-            backgroundColor: "oklch(0.372 0.044 257.287)", // Yellow 500
+            backgroundColor: 'oklch(0.372 0.044 257.287)', // Yellow 500
         },
         {
-            label: "Tax",
+            label: 'Tax',
             data: aggregatedData.map((entry) => entry.tax),
-            backgroundColor: "rgb(54, 65, 83)", // Red 500
+            backgroundColor: 'rgb(54, 65, 83)', // Red 500
         },
     ];
 
-    const ctx = document.getElementById("turnoverStacked") as HTMLCanvasElement;
+    const ctx = document.getElementById('turnoverStacked') as HTMLCanvasElement;
 
     if (!ctx) {
-        console.error("Failed to get canvas context.");
+        console.error('Failed to get canvas context.');
         return;
     }
 
@@ -132,7 +130,7 @@ function renderChart(granularity: string, newReport: ReportData) {
     }
 
     chartInstance.value = new Chart(ctx, {
-        type: "bar",
+        type: 'bar',
         data: {
             labels: aggregatedData.map((entry) => entry.date),
             datasets,
@@ -152,7 +150,7 @@ function renderChart(granularity: string, newReport: ReportData) {
                 legend: {
                     labels: {
                         usePointStyle: true, // Use a point style for labels
-                        pointStyle: "circle",
+                        pointStyle: 'circle',
                         pointStyleWidth: 18,
                     },
                 },
@@ -167,19 +165,19 @@ function aggregateData(reportData: ReportData, granularity: string) {
 
     Object.entries(reportData).forEach(([date, values]) => {
         const jsDate = new Date(date);
-        let key: string = "";
+        let key: string = '';
 
-        if (granularity === "day") {
+        if (granularity === 'day') {
             key = date;
-        } else if (granularity === "week") {
+        } else if (granularity === 'week') {
             const year = jsDate.getFullYear();
             const week = getISOWeek(jsDate);
-            key = `${year}-W${String(week).padStart(2, "0")}`;
-        } else if (granularity === "month") {
+            key = `${year}-W${String(week).padStart(2, '0')}`;
+        } else if (granularity === 'month') {
             const year = jsDate.getFullYear();
-            const month = String(jsDate.getMonth() + 1).padStart(2, "0");
+            const month = String(jsDate.getMonth() + 1).padStart(2, '0');
             key = `${year}-${month}`;
-        } else if (granularity === "year") {
+        } else if (granularity === 'year') {
             key = `${jsDate.getFullYear()}`; // Year format
         }
 
@@ -216,9 +214,9 @@ function aggregateData(reportData: ReportData, granularity: string) {
         }))
         .sort((a, b) => {
             const parseDate = (date: string) => {
-                if (date.includes("-W")) {
+                if (date.includes('-W')) {
                     // Parse ISO week format (e.g., 2025-W01)
-                    const [year, week] = date.split("-W").map(Number);
+                    const [year, week] = date.split('-W').map(Number);
                     const firstDayOfYear = new Date(Date.UTC(year, 0, 1));
                     const dayOffset = (week - 1) * 7;
                     const dayOfWeek = firstDayOfYear.getUTCDay();
@@ -239,7 +237,6 @@ function aggregateData(reportData: ReportData, granularity: string) {
 
             return dateA.getTime() - dateB.getTime(); // Sort ascending
         });
-
 }
 
 onMounted(() => renderChart(selectedGranularity.value, report.value));
