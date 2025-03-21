@@ -30,6 +30,14 @@ add_action('rest_api_init', function () {
     ]);
 });
 
+add_action('rest_api_init', function () {
+    register_rest_route('custom/v1', '/order/recalculate-orders', [
+        'methods' => ['GET', 'POST'],
+        'callback' => 'shop_manager_reset_orders_backfill',
+        'permission_callback' => '__return_true', // Adjust permissions as needed.
+    ]);
+});
+
 /**
  * Callback function for the API endpoint to get orders data with pagination.
  */
@@ -230,7 +238,17 @@ function shop_manager_last_days_orders(WP_REST_Request $request)
     // Query WooCommerce orders from the last N days
     $args = [
         'date_created' => '>' . $start_date, // Ensure the format is correct
-        'status' => ['wc-completed', 'wc-processing'], // Include desired order statuses
+        'status' => [
+            'wc-completed',
+            'wc-processing',
+            'wc-suuttimet',
+            'wc-ecu',
+            'wc-preorder',
+            'wc-pyyhe',
+            'wc-huolto',
+            'wc-nouto',
+        ],
+        // Include desired order statuses,
         'type' => 'shop_order', // Post type
         'limit' => -1, // Ensure no limit on the number of orders fetched
     ];
@@ -260,6 +278,7 @@ function shop_manager_last_days_orders(WP_REST_Request $request)
                 'cogs_price' => 0,
                 'packing_cost' => 0,
                 'work_time_minutes' => 0,
+                'work_cost' => 0,
                 'development_cost' => 0,
                 'development_months' => 0,
             ];
@@ -354,7 +373,16 @@ function shop_manager_store_orders_db($newestOnly = false)
             'limit' => -1, // Fetch all orders from today.
             'orderby' => 'date_created',
             'order' => 'DESC',
-            'status' => ['wc-completed', 'wc-processing'],
+            'status' => [
+                'wc-completed',
+                'wc-processing',
+                'wc-suuttimet',
+                'wc-ecu',
+                'wc-preorder',
+                'wc-pyyhe',
+                'wc-huolto',
+                'wc-nouto',
+            ],
             'type' => 'shop_order',
             'date_created' => '>' . $start_date,
         ];
@@ -370,7 +398,16 @@ function shop_manager_store_orders_db($newestOnly = false)
             'limit' => $batch_size,
             'orderby' => 'date_created',
             'order' => 'DESC', // Start from newest orders.
-            'status' => ['wc-completed', 'wc-processing'],
+            'status' => [
+                'wc-completed',
+                'wc-processing',
+                'wc-suuttimet',
+                'wc-ecu',
+                'wc-preorder',
+                'wc-pyyhe',
+                'wc-huolto',
+                'wc-nouto',
+            ],
             'type' => 'shop_order',
         ];
 
@@ -497,7 +534,16 @@ function shop_manager_reset_orders_backfill(WP_REST_Request $request)
         $args = [
             'limit' => $batchSize,
             'page' => $currentPage,
-            'status' => ['wc-completed', 'wc-processing'],
+            'status' => [
+                'wc-completed',
+                'wc-processing',
+                'wc-suuttimet',
+                'wc-ecu',
+                'wc-preorder',
+                'wc-pyyhe',
+                'wc-huolto',
+                'wc-nouto',
+            ],
             'type' => 'shop_order',
         ];
 
@@ -540,11 +586,3 @@ function shop_manager_reset_orders_backfill(WP_REST_Request $request)
         'message' => 'Invalid request method.',
     ]);
 }
-
-add_action('rest_api_init', function () {
-    register_rest_route('custom/v1', '/order/recalculate-orders', [
-        'methods' => ['GET', 'POST'],
-        'callback' => 'shop_manager_reset_orders_backfill',
-        'permission_callback' => '__return_true', // Adjust permissions as needed.
-    ]);
-});
