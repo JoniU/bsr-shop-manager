@@ -1,22 +1,32 @@
 <template>
     <header class="bg-gray-100 dark:bg-gray-800 border-b border-gray-300 dark:border-gray-700">
         <div class="flex items-center justify-between w-full">
-
             <div class="flex items-center space-x-4 pl-2 pb-2">
-                <UButton color="secondary" :to="'/wp-admin/'" size="xl" variant="soft" icon="i-dashicons-wordpress"
-                    class="p-1" />
+                <UButton
+                    color="secondary"
+                    :to="'/wp-admin/'"
+                    size="xl"
+                    variant="soft"
+                    icon="i-dashicons-wordpress"
+                    class="p-1"
+                />
             </div>
 
             <!-- Tabs (aligned to the left) -->
-            <UTabs :items="pages" v-model="selectedPage" size="md" variant="link" class="flex-1"
-                @update:model-value="switchPage" />
+            <UTabs
+                v-model="selectedPage"
+                :items="pages"
+                size="md"
+                variant="link"
+                class="flex-1"
+                @update:model-value="switchPage"
+            />
 
             <!-- Theme Switch (aligned to the right) -->
             <div class="flex items-center space-x-2 pr-2">
                 <UIcon :name="isDark ? 'i-lucide-moon' : 'i-lucide-sun'" />
-                <USwitch :model-value="isDark" @update:model-value="toggleTheme" color="primary" size="sm" />
+                <USwitch :model-value="isDark" color="primary" size="sm" @update:model-value="toggleTheme" />
             </div>
-
         </div>
     </header>
 </template>
@@ -53,9 +63,9 @@ const pages = ref([
         icon: 'i-lucide-settings', // Icon for settings
     },
     {
-        label: 'Analytics Data',
-        value: 'AnalyticsData',
-        icon: 'i-lucide-settings', // Icon for settings
+        label: 'Data Tools',
+        value: 'DataTools',
+        icon: 'i-lucide-database-backup', // Icon for settings
     },
 ]);
 
