@@ -20,9 +20,7 @@ import Editor from '~/components/Editor.vue';
 import Inventory from '~/components/Inventory.vue';
 import Settings from '~/components/Settings.vue';
 import OrderData from '~/components/OrderData.vue';
-import AnalyticsData from '~/components/AnalyticsData.vue';
-
-
+import DataTools from '~/components/DataTools.vue';
 
 const appStore = useAppStore();
 
@@ -37,8 +35,7 @@ const components = {
     Inventory,
     Settings,
     OrderData,
-    AnalyticsData,
+    DataTools,
 };
-
 </script>
 <style lang="css" scoped></style>
